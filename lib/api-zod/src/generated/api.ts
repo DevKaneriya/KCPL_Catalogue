@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * KCPL Catalog Automation System API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import * as zod from "zod";
 
@@ -12,6 +12,147 @@ import * as zod from "zod";
  */
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
+});
+
+/**
+ * @summary Login
+ */
+export const LoginBody = zod.object({
+  username: zod.string(),
+  password: zod.string(),
+});
+
+export const LoginResponse = zod.object({
+  user: zod.object({
+    id: zod.number(),
+    username: zod.string(),
+    email: zod.string().optional(),
+    roleId: zod.number().optional(),
+    roleName: zod.string().optional(),
+    isActive: zod.boolean(),
+    createdAt: zod.date(),
+  }),
+  token: zod.string(),
+});
+
+/**
+ * @summary Get current user
+ */
+export const GetMeResponse = zod.object({
+  id: zod.number(),
+  username: zod.string(),
+  email: zod.string().optional(),
+  roleId: zod.number().optional(),
+  roleName: zod.string().optional(),
+  isActive: zod.boolean(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary List users
+ */
+export const ListUsersResponseItem = zod.object({
+  id: zod.number(),
+  username: zod.string(),
+  email: zod.string().optional(),
+  roleId: zod.number().optional(),
+  roleName: zod.string().optional(),
+  isActive: zod.boolean(),
+  createdAt: zod.date(),
+});
+export const ListUsersResponse = zod.array(ListUsersResponseItem);
+
+/**
+ * @summary Create user
+ */
+export const CreateUserBody = zod.object({
+  username: zod.string(),
+  email: zod.string().optional(),
+  password: zod.string(),
+  roleId: zod.number().optional(),
+});
+
+/**
+ * @summary Update user
+ */
+export const UpdateUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateUserBody = zod.object({
+  username: zod.string().optional(),
+  email: zod.string().optional(),
+  password: zod.string().optional(),
+  roleId: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateUserResponse = zod.object({
+  id: zod.number(),
+  username: zod.string(),
+  email: zod.string().optional(),
+  roleId: zod.number().optional(),
+  roleName: zod.string().optional(),
+  isActive: zod.boolean(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Delete user
+ */
+export const DeleteUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List roles
+ */
+export const ListRolesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().optional(),
+  permissions: zod.array(zod.string()),
+  userCount: zod.number(),
+  createdAt: zod.date(),
+});
+export const ListRolesResponse = zod.array(ListRolesResponseItem);
+
+/**
+ * @summary Create role
+ */
+export const CreateRoleBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  permissions: zod.array(zod.string()),
+});
+
+/**
+ * @summary Update role
+ */
+export const UpdateRoleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateRoleBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  permissions: zod.array(zod.string()),
+});
+
+export const UpdateRoleResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().optional(),
+  permissions: zod.array(zod.string()),
+  userCount: zod.number(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Delete role
+ */
+export const DeleteRoleParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
@@ -90,7 +231,7 @@ export const DeleteCategoryParams = zod.object({
 });
 
 /**
- * @summary List products with pagination and filtering
+ * @summary List products
  */
 export const listProductsQueryPageDefault = 1;
 export const listProductsQueryLimitDefault = 20;
@@ -327,11 +468,12 @@ export const DeleteContentPageParams = zod.object({
 });
 
 /**
- * @summary Export catalog (trigger export job)
+ * @summary Export catalog
  */
 export const ExportCatalogBody = zod.object({
   format: zod.enum(["pdf", "doc", "cdr"]),
   sections: zod.array(zod.string()),
+  categoryIds: zod.array(zod.number()).optional(),
 });
 
 export const ExportCatalogResponse = zod.object({
@@ -366,6 +508,84 @@ export const GetCatalogStatsResponse = zod.object({
       count: zod.number(),
     }),
   ),
+});
+
+/**
+ * @summary Get catalog data for preview
+ */
+export const GetCatalogPreviewDataBody = zod.object({
+  sections: zod.array(zod.string()),
+  categoryIds: zod.array(zod.number()).optional(),
+});
+
+export const GetCatalogPreviewDataResponse = zod.object({
+  contentPages: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      content: zod.string().optional(),
+      imageUrl: zod.string().optional(),
+      sortOrder: zod.number(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  ),
+  categories: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      slug: zod.string(),
+      products: zod.array(
+        zod.object({
+          id: zod.number(),
+          categoryId: zod.number(),
+          categoryName: zod.string().optional(),
+          name: zod.string().optional(),
+          skuCode: zod.string().optional(),
+          kcplCode: zod.string().optional(),
+          vehicleBrand: zod.string().optional(),
+          engineBrand: zod.string().optional(),
+          productType: zod.string().optional(),
+          size: zod.string().optional(),
+          imageUrl: zod.string().optional(),
+          specifications: zod.record(zod.string(), zod.unknown()).optional(),
+          createdAt: zod.date(),
+          updatedAt: zod.date(),
+        }),
+      ),
+    }),
+  ),
+  index: zod.array(
+    zod.object({
+      brand: zod.string(),
+      sizes: zod.array(
+        zod.object({
+          size: zod.string(),
+          products: zod.array(
+            zod.object({
+              id: zod.number(),
+              categoryId: zod.number(),
+              categoryName: zod.string().optional(),
+              name: zod.string().optional(),
+              skuCode: zod.string().optional(),
+              kcplCode: zod.string().optional(),
+              vehicleBrand: zod.string().optional(),
+              engineBrand: zod.string().optional(),
+              productType: zod.string().optional(),
+              size: zod.string().optional(),
+              imageUrl: zod.string().optional(),
+              specifications: zod
+                .record(zod.string(), zod.unknown())
+                .optional(),
+              createdAt: zod.date(),
+              updatedAt: zod.date(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+  sections: zod.array(zod.string()),
 });
 
 /**

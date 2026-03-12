@@ -1,24 +1,21 @@
 openapi: 3.1.0
 info:
   title: Api
-  version: 0.1.0
+  version: 0.2.0
   description: KCPL Catalog Automation System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: users
+  - name: roles
   - name: products
-    description: Product SKU management
   - name: categories
-    description: Product category management
   - name: content
-    description: Content page management
   - name: catalog
-    description: Catalog export and index
   - name: logs
-    description: Activity logs
 paths:
   /healthz:
     get:
@@ -32,6 +29,195 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [roles]
+      summary: List roles
+      responses:
+        "200":
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+    post:
+      operationId: createRole
+      tags: [roles]
+      summary: Create role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleRequest"
+      responses:
+        "201":
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+
+  /roles/{id}:
+    put:
+      operationId: updateRole
+      tags: [roles]
+      summary: Update role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleRequest"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+    delete:
+      operationId: deleteRole
+      tags: [roles]
+      summary: Delete role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
   /categories:
     get:
@@ -124,7 +310,7 @@ paths:
     get:
       operationId: listProducts
       tags: [products]
-      summary: List products with pagination and filtering
+      summary: List products
       parameters:
         - name: page
           in: query
@@ -360,7 +546,7 @@ paths:
     post:
       operationId: exportCatalog
       tags: [catalog]
-      summary: Export catalog (trigger export job)
+      summary: Export catalog
       requestBody:
         required: true
         content:
@@ -387,6 +573,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CatalogStats"
+
+  /catalog/preview-data:
+    post:
+      operationId: getCatalogPreviewData
+      tags: [catalog]
+      summary: Get catalog data for preview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sections:
+                  type: array
+                  items:
+                    type: string
+                categoryIds:
+                  type: array
+                  items:
+                    type: integer
+              required: [sections]
+      responses:
+        "200":
+          description: Preview data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogPreviewData"
 
   /activity-logs:
     get:
@@ -420,6 +635,111 @@ components:
         status:
           type: string
       required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required: [user, token]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        roleId:
+          type: integer
+        roleName:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, username, isActive, createdAt]
+
+    CreateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        roleId:
+          type: integer
+      required: [username, password]
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        roleId:
+          type: integer
+        isActive:
+          type: boolean
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        userCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, permissions, userCount, createdAt]
+
+    CreateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+      required: [name, permissions]
 
     ProductCategory:
       type: object
@@ -598,6 +918,10 @@ components:
           type: array
           items:
             type: string
+        categoryIds:
+          type: array
+          items:
+            type: integer
       required: [format, sections]
 
     ExportResult:
@@ -613,6 +937,39 @@ components:
           type: string
           format: date-time
       required: [success, message, exportedAt]
+
+    CatalogPreviewData:
+      type: object
+      properties:
+        contentPages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContentPage"
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              slug:
+                type: string
+              products:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+            required: [id, name, slug, products]
+        index:
+          type: array
+          items:
+            $ref: "#/components/schemas/IndexNode"
+        sections:
+          type: array
+          items:
+            type: string
+      required: [contentPages, categories, index, sections]
 
     CatalogStats:
       type: object

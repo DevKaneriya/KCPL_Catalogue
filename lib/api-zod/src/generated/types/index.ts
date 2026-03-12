@@ -3,11 +3,13 @@
  * Do not edit manually.
  * Api
  * KCPL Catalog Automation System API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export * from "./activityLog";
 export * from "./activityLogResponse";
+export * from "./catalogPreviewData";
+export * from "./catalogPreviewDataCategoriesItem";
 export * from "./catalogStats";
 export * from "./catalogStatsCategoryBreakdownItem";
 export * from "./contentPage";
@@ -16,18 +18,27 @@ export * from "./createCategoryRequestFieldSchema";
 export * from "./createContentPageRequest";
 export * from "./createProductRequest";
 export * from "./createProductRequestSpecifications";
+export * from "./createRoleRequest";
+export * from "./createUserRequest";
+export * from "./errorResponse";
 export * from "./exportCatalogRequest";
 export * from "./exportCatalogRequestFormat";
 export * from "./exportResult";
 export * from "./getCatalogIndexParams";
+export * from "./getCatalogPreviewDataBody";
 export * from "./healthStatus";
 export * from "./indexNode";
 export * from "./indexNodeSizesItem";
 export * from "./listActivityLogsParams";
 export * from "./listProductsParams";
+export * from "./loginRequest";
+export * from "./loginResponse";
 export * from "./product";
 export * from "./productCategory";
 export * from "./productCategoryFieldSchema";
 export * from "./productListResponse";
 export * from "./productSpecifications";
 export * from "./reorderContentPagesBody";
+export * from "./role";
+export * from "./updateUserRequest";
+export * from "./user";

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, productsTable, categoriesTable, activityLogsTable } from "@workspace/db";
-import { eq, sql, desc, and } from "drizzle-orm";
+import { db, productsTable, categoriesTable, activityLogsTable, contentPagesTable } from "@workspace/db";
+import { eq, sql, desc, and, asc } from "drizzle-orm";
 import { logActivity } from "../lib/activity-logger";
 
 const router: IRouter = Router();
@@ -69,6 +69,82 @@ router.get("/catalog/stats", async (_req, res) => {
   const lastUpdated = recentActivity[0]?.createdAt ?? new Date();
 
   res.json({ totalRadiators, totalCondensers, totalProducts, lastUpdated, recentActivity, categoryBreakdown: breakdown });
+});
+
+router.post("/catalog/preview-data", async (req, res) => {
+  const { sections, categoryIds } = req.body as { sections: string[]; categoryIds?: number[] };
+
+  const contentPages = sections.includes("content") || sections.some(s => s.startsWith("content-"))
+    ? await db.select().from(contentPagesTable).orderBy(asc(contentPagesTable.sortOrder))
+    : [];
+
+  const cats = categoryIds?.length
+    ? await db.select().from(categoriesTable).where(sql`${categoriesTable.id} = ANY(${categoryIds})`)
+    : await db.select().from(categoriesTable).orderBy(categoriesTable.id);
+
+  const categoriesWithProducts = await Promise.all(
+    cats.map(async (cat) => {
+      const products = await db
+        .select({
+          id: productsTable.id,
+          categoryId: productsTable.categoryId,
+          categoryName: categoriesTable.name,
+          name: productsTable.name,
+          skuCode: productsTable.skuCode,
+          kcplCode: productsTable.kcplCode,
+          vehicleBrand: productsTable.vehicleBrand,
+          engineBrand: productsTable.engineBrand,
+          productType: productsTable.productType,
+          size: productsTable.size,
+          imageUrl: productsTable.imageUrl,
+          specifications: productsTable.specifications,
+          createdAt: productsTable.createdAt,
+          updatedAt: productsTable.updatedAt,
+        })
+        .from(productsTable)
+        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+        .where(eq(productsTable.categoryId, cat.id))
+        .orderBy(productsTable.vehicleBrand, productsTable.name);
+      return { id: cat.id, name: cat.name, slug: cat.slug, products };
+    })
+  );
+
+  const allProducts = await db
+    .select({
+      id: productsTable.id,
+      categoryId: productsTable.categoryId,
+      categoryName: categoriesTable.name,
+      name: productsTable.name,
+      skuCode: productsTable.skuCode,
+      kcplCode: productsTable.kcplCode,
+      vehicleBrand: productsTable.vehicleBrand,
+      engineBrand: productsTable.engineBrand,
+      productType: productsTable.productType,
+      size: productsTable.size,
+      imageUrl: productsTable.imageUrl,
+      specifications: productsTable.specifications,
+      createdAt: productsTable.createdAt,
+      updatedAt: productsTable.updatedAt,
+    })
+    .from(productsTable)
+    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .orderBy(productsTable.vehicleBrand, productsTable.size, productsTable.name);
+
+  const brandMap = new Map<string, Map<string, typeof allProducts>>();
+  for (const product of allProducts) {
+    const brand = product.vehicleBrand || "Unknown";
+    const size = product.size || "Unknown";
+    if (!brandMap.has(brand)) brandMap.set(brand, new Map());
+    const sizeMap = brandMap.get(brand)!;
+    if (!sizeMap.has(size)) sizeMap.set(size, []);
+    sizeMap.get(size)!.push(product);
+  }
+  const index = Array.from(brandMap.entries()).map(([brand, sizeMap]) => ({
+    brand,
+    sizes: Array.from(sizeMap.entries()).map(([size, prods]) => ({ size, products: prods })),
+  }));
+
+  res.json({ contentPages, categories: categoriesWithProducts, index, sections });
 });
 
 router.post("/catalog/export", async (req, res) => {

@@ -3,11 +3,12 @@
  * Do not edit manually.
  * Api
  * KCPL Catalog Automation System API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { ExportCatalogRequestFormat } from "./exportCatalogRequestFormat";
 
 export interface ExportCatalogRequest {
   format: ExportCatalogRequestFormat;
   sections: string[];
+  categoryIds?: number[];
 }

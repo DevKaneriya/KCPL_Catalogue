@@ -3,10 +3,64 @@
  * Do not edit manually.
  * Api
  * KCPL Catalog Automation System API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 export interface HealthStatus {
   status: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email?: string;
+  roleId?: number;
+  roleName?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface LoginResponse {
+  user: User;
+  token: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  email?: string;
+  password: string;
+  roleId?: number;
+}
+
+export interface UpdateUserRequest {
+  username?: string;
+  email?: string;
+  password?: string;
+  roleId?: number;
+  isActive?: boolean;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+  permissions: string[];
+  userCount: number;
+  createdAt: string;
+}
+
+export interface CreateRoleRequest {
+  name: string;
+  description?: string;
+  permissions: string[];
 }
 
 export type ProductCategoryFieldSchema = { [key: string]: unknown };
@@ -112,6 +166,7 @@ export const ExportCatalogRequestFormat = {
 export interface ExportCatalogRequest {
   format: ExportCatalogRequestFormat;
   sections: string[];
+  categoryIds?: number[];
 }
 
 export interface ExportResult {
@@ -119,6 +174,20 @@ export interface ExportResult {
   message: string;
   downloadUrl?: string;
   exportedAt: string;
+}
+
+export type CatalogPreviewDataCategoriesItem = {
+  id: number;
+  name: string;
+  slug: string;
+  products: Product[];
+};
+
+export interface CatalogPreviewData {
+  contentPages: ContentPage[];
+  categories: CatalogPreviewDataCategoriesItem[];
+  index: IndexNode[];
+  sections: string[];
 }
 
 export type CatalogStatsCategoryBreakdownItem = {
@@ -166,6 +235,11 @@ export type GetCatalogIndexParams = {
 
 export type ReorderContentPagesBody = {
   ids: number[];
+};
+
+export type GetCatalogPreviewDataBody = {
+  sections: string[];
+  categoryIds?: number[];
 };
 
 export type ListActivityLogsParams = {

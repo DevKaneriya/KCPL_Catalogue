@@ -1,0 +1,111 @@
+AUTHENTICATION SYSTEM (LOGIN PAGE)
+
+The system should include a secure login page so that only authorized users can access the dashboard.
+
+When a user visits the system, they should first see a login screen before accessing the admin dashboard.
+
+The login page should include:
+
+• Email or Username field
+• Password field
+• Login button
+• Optional “Forgot Password” option
+
+After successful login, the user should be redirected to the main dashboard page.
+
+If login credentials are incorrect, the system should show a clear error message.
+
+The login page UI should follow the same modern design language as the rest of the system — minimal, clean, and premium looking, with smooth animations and modern input fields.
+
+ROLES AND PERMISSIONS PAGE
+
+The system should also include a Roles and Responsibilities management page.
+
+This page allows administrators to create and manage different user roles and permissions.
+
+Examples of roles might include:
+
+Admin
+Manager
+Editor
+Viewer
+
+Each role should have configurable permissions that control what actions the user can perform in the system.
+
+For example:
+
+Admin
+• Full system access
+• Create/edit/delete products
+• Create product categories
+• Manage content pages
+• Export catalogs
+• Manage users and roles
+
+Manager
+• Add and edit products
+• Export catalogs
+• View content pages
+
+Editor
+• Edit content pages
+• Add product data
+
+Viewer
+• View products and catalogs only
+• Cannot edit or delete anything
+
+ROLE MANAGEMENT FEATURES
+
+Inside the Roles and Permissions page, administrators should be able to:
+
+• Create new roles
+• Edit existing roles
+• Delete roles
+• Assign permissions to roles
+
+Permissions should control access to features such as:
+
+Product management
+Product category creation
+Content management
+Catalog export
+User management
+
+USER MANAGEMENT
+
+There should also be a Users section where administrators can:
+
+• Create new users
+• Assign roles to users
+• Edit user information
+• Disable or remove users
+
+Each user should be assigned a role, and the role determines what the user can access inside the system.
+
+ACCESS CONTROL
+
+The system should enforce role-based access control (RBAC).
+
+This means:
+
+• Users only see pages they have permission to access
+• Certain actions (delete products, create categories, etc.) are restricted to specific roles
+
+For example:
+
+A Viewer should not see Edit or Delete buttons.
+
+SECURITY
+
+The authentication system should follow good security practices:
+
+• Passwords should be securely hashed
+• Sessions should be managed securely
+• Unauthorized users should not be able to access dashboard routes
+
+USER EXPERIENCE
+
+The login flow and user management pages should maintain the same modern Apple / CRED inspired design style with smooth animations, rounded elements, and a clean layout.
+
+User and role management should be simple, clear, and easy to manage even for non-technical users.

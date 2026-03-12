@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { Link, useRoute } from "wouter";
+import { Link, useRoute, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { useListProducts, useListCategories, useDeleteProduct } from "@workspace/api-client-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { PackageSearch, Plus, Search, Edit, Trash2, ImageOff, Loader2 } from "lucide-react";
+import { PackageSearch, Plus, Search, Edit, Trash2, ImageOff, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Products() {
   const [, params] = useRoute("/products/:categorySlug");
   const slug = params?.categorySlug;
+  const [, setLocation] = useLocation();
   
   const { data: categories } = useListCategories();
   const currentCategory = slug && slug !== 'all' ? categories?.find(c => c.slug === slug) : null;
@@ -48,6 +50,12 @@ export default function Products() {
     }
   };
 
+  const handleDownloadCatalog = () => {
+    // Navigate to export page with this category selected
+    // Note: Export page will need to read state or query param. For now, simple navigation.
+    setLocation(`/export?category=${categoryId || 'all'}`);
+  };
+
   return (
     <Layout>
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
@@ -59,21 +67,27 @@ export default function Products() {
           <p className="text-muted-foreground mt-1">Manage SKUs, details, and specifications.</p>
         </div>
         
-        <Button asChild className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
-          <Link href={slug && slug !== 'all' ? `/products/${slug}/new` : "/products/all/new"}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Product
-          </Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+          <Button variant="outline" className="shadow-sm hover:bg-muted/50" onClick={handleDownloadCatalog}>
+            <Download className="w-4 h-4 mr-2" />
+            Download {currentCategory ? currentCategory.name : 'All'} Catalog
+          </Button>
+          <Button asChild className="hover-elevate shadow-lg shadow-primary/20">
+            <Link href={slug && slug !== 'all' ? `/products/${slug}/new` : "/products/all/new"}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Product
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="bg-card border border-border/50 rounded-md overflow-hidden shadow-sm">
+      <div className="bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm">
         <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-4 justify-between items-center bg-muted/20">
-          <div className="relative w-full max-w-sm">
+          <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input 
               placeholder="Search by SKU, KCPL code, or brand..." 
-              className="pl-9 bg-background"
+              className="pl-9 bg-background h-10 border-border/60"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -81,35 +95,34 @@ export default function Products() {
               }}
             />
           </div>
-          <div className="text-sm text-muted-foreground font-medium tabular-nums">
+          <div className="text-sm text-muted-foreground font-medium tabular-nums px-3 py-1.5 bg-background rounded-md border border-border/50 shadow-sm">
             {data?.total || 0} Products Found
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="w-[60px]"></TableHead>
-                <TableHead>KCPL Code</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Brands</TableHead>
-                <TableHead>Type/Size</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[100px] py-4">Image</TableHead>
+                <TableHead className="py-4">Details</TableHead>
+                <TableHead className="py-4">Brands</TableHead>
+                <TableHead className="py-4">Type/Size</TableHead>
+                <TableHead className="py-4">Category</TableHead>
+                <TableHead className="text-right py-4">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
                     Loading products...
                   </TableCell>
                 </TableRow>
               ) : data?.products?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-48 text-center">
+                  <TableCell colSpan={6} className="h-48 text-center">
                     <PackageSearch className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
                     <p className="text-lg font-medium text-foreground">No products found</p>
                     <p className="text-sm text-muted-foreground">Try adjusting your search or add a new product.</p>
@@ -117,42 +130,51 @@ export default function Products() {
                 </TableRow>
               ) : (
                 data?.products?.map((product) => (
-                  <TableRow key={product.id} className="group">
-                    <TableCell>
-                      <div className="w-10 h-10 rounded border border-border/50 bg-muted flex items-center justify-center overflow-hidden">
+                  <TableRow key={product.id} className="group hover:bg-muted/20 transition-colors">
+                    <TableCell className="py-3">
+                      <div className="w-20 h-20 rounded-lg border border-border/60 bg-background flex items-center justify-center overflow-hidden shadow-sm">
                         {product.imageUrl ? (
-                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
                         ) : (
-                          <ImageOff className="w-4 h-4 text-muted-foreground opacity-50" />
+                          <ImageOff className="w-6 h-6 text-muted-foreground opacity-30" />
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono font-medium">{product.kcplCode || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{product.skuCode || '-'}</TableCell>
-                    <TableCell className="font-medium">{product.name || 'Unnamed Product'}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-sm">{product.vehicleBrand || '-'}</span>
+                    <TableCell className="py-3">
+                      <div className="font-medium text-base mb-1">{product.name || 'Unnamed Product'}</div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-mono bg-muted/50 px-1.5 py-0.5 rounded text-xs border border-border/40 text-foreground">{product.kcplCode || '-'}</span>
+                        <span>SKU: {product.skuCode || '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">{product.vehicleBrand || '-'}</span>
                         {product.engineBrand && <span className="text-xs text-muted-foreground">{product.engineBrand}</span>}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
+                    <TableCell className="py-3">
+                      <div className="flex flex-col gap-1">
                         <span className="text-sm capitalize">{product.productType || '-'}</span>
                         {product.size && <span className="text-xs text-muted-foreground">{product.size}</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-muted-foreground hover:text-primary">
+                    <TableCell className="py-3">
+                      <Badge variant="secondary" className="bg-primary/5 text-primary hover:bg-primary/10 border-primary/20">
+                        {categories?.find(c => c.id === product.categoryId)?.name || 'Uncategorized'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right py-3">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="outline" size="icon" asChild className="h-9 w-9 bg-background hover:text-primary hover:border-primary/50 shadow-sm">
                           <Link href={`/products/${slug || 'all'}/${product.id}/edit`}>
                             <Edit className="w-4 h-4" />
                           </Link>
                         </Button>
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="icon" 
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-9 w-9 bg-background hover:text-destructive hover:border-destructive/50 shadow-sm"
                           onClick={() => handleDelete(product.id)}
                           disabled={deleteMutation.isPending}
                         >
@@ -168,17 +190,19 @@ export default function Products() {
         </div>
         
         {data && data.totalPages > 1 && (
-          <div className="p-4 border-t border-border/50 flex justify-between items-center bg-muted/20">
+          <div className="p-4 border-t border-border/50 flex justify-between items-center bg-muted/10">
             <Button 
               variant="outline" 
+              size="sm"
               disabled={page === 1}
               onClick={() => setPage(p => Math.max(1, p - 1))}
             >
               Previous
             </Button>
-            <span className="text-sm font-medium">Page {page} of {data.totalPages}</span>
+            <span className="text-sm font-medium text-muted-foreground">Page <span className="text-foreground">{page}</span> of {data.totalPages}</span>
             <Button 
               variant="outline" 
+              size="sm"
               disabled={page === data.totalPages}
               onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
             >

@@ -1,0 +1,244 @@
+SYSTEM IMPROVEMENTS, BUG FIXES, AND UI ENHANCEMENTS — KCPL CATALOG SYSTEM
+
+There are several bugs and UI issues in the current implementation of the KCPL catalog system that need to be fixed and improved. Please carefully analyze the system and implement the following changes and improvements.
+
+PRODUCT LIST PAGE IMPROVEMENTS (RADIATORS AND CONDENSERS)
+
+On the Radiators page and Condensers page, the product list currently shows only text-based entries.
+
+This needs to be improved.
+
+Each list item must include a proper product image preview along with the product details.
+
+Each row in the product list should contain:
+
+• Product image thumbnail
+• Product name
+• Vehicle brand / engine brand
+• Product type
+• Unique KCPL code
+• Action buttons (View, Edit, Delete)
+
+The product image should be clearly visible so users can visually identify the product instead of relying only on text.
+
+PRODUCT PREVIEW AND DOWNLOAD OPTIONS
+
+Inside the Radiators page and Condensers page, there should be download options directly available.
+
+For example:
+
+• Download Radiator Catalog
+• Download Condenser Catalog
+
+Users should be able to download only that specific product category catalog without needing to download the entire catalog.
+
+DOWNLOAD FLOW IMPROVEMENT
+
+The download process should follow a clear step-by-step flow.
+
+Step 1 — Section Selector
+
+When the user clicks Download, the system should first show a section selector interface.
+
+This selector should allow the user to choose which pages they want to include in the export.
+
+Examples of selectable sections:
+
+Preface pages
+Introduction pages
+Company pages
+Index pages
+Radiator catalog pages
+Condenser catalog pages
+Other product category pages
+
+The user should be able to select or deselect sections using checkboxes.
+
+Step 2 — Catalog Preview
+
+After selecting sections, the system should open a Preview Page.
+
+This preview page should display the catalog exactly how it will appear when exported to PDF.
+
+It should visually show the page layout and design.
+
+The preview must match the actual catalog PDF design layout that is currently used by the company.
+
+This preview helps the user confirm that the catalog looks correct before downloading.
+
+Step 3 — Export
+
+After previewing, the user can click Download PDF.
+
+The catalog should then be generated and downloaded.
+
+CURRENT BUG: PDF EXPORT NOT WORKING
+
+Currently the catalog PDF is not downloading correctly.
+
+This is a bug that must be fixed.
+
+The system should properly generate the PDF based on:
+
+• selected sections
+• product data
+• catalog template
+
+And then successfully download it.
+
+CONTENT EDITOR IMPROVEMENTS
+
+The content editor used for Content Management pages must be significantly improved.
+
+It should be a feature-rich WYSIWYG editor similar to a modern blog editor.
+
+Users must be able to:
+
+• Add and edit text
+• Upload and place images inside content
+• Change fonts
+• Change text sizes
+• Add headings
+• Format text (bold, italic, underline)
+• Create lists
+• Align text
+• Insert links
+
+The editor should behave like Notion, Medium, or a modern blog CMS editor.
+
+PRODUCT CATEGORY CREATION IMPROVEMENT
+
+Currently, when creating a new product category, the system only asks for the product name.
+
+This is not sufficient.
+
+When creating a new product category, the system must allow the admin to define the SKU form structure.
+
+This means the user should be able to configure:
+
+• Field name
+• Field type
+• Input type
+
+Examples of field types:
+
+Text input
+Number input
+Dropdown selection
+Image upload
+Description text area
+
+Example configuration for a product category:
+
+Field: Product Name → Text input
+Field: Size → Number input
+Field: Vehicle Brand → Dropdown
+Field: Product Image → Image upload
+Field: Description → Text area
+
+These configured fields should automatically become the SKU creation form fields for that product category.
+
+This makes the system fully dynamic for any new product types.
+
+IMAGE UPLOAD IMPROVEMENT
+
+Image uploads throughout the system should support drag and drop functionality.
+
+Instead of a basic file upload button, users should be able to:
+
+• Drag images directly into the upload area
+• See image previews immediately
+
+This should apply to:
+
+Product image uploads
+Content page images
+
+DASHBOARD BUG
+
+When a new product category is created, it is currently not appearing on the dashboard.
+
+This is a bug.
+
+The dashboard should automatically update and display:
+
+• Newly created product categories
+• SKU counts for those categories
+
+UI AND DESIGN PROBLEMS
+
+The current UI is very basic and looks like a default admin panel.
+
+It needs a complete redesign.
+
+The new UI should feel like a premium modern application.
+
+DESIGN STYLE REQUIREMENT
+
+The UI should be inspired by modern premium interfaces such as:
+
+Apple iOS
+CRED
+Linear
+Notion
+Stripe dashboards
+
+The design should feel minimal, elegant, and high-end.
+
+VISUAL STYLE
+
+Use a black and white primary design system with subtle accent colors.
+
+Focus on:
+
+• Clean typography
+• Rounded corners
+• Smooth shadows
+• Soft gradients
+• High-quality spacing
+
+Cards, buttons, and inputs should have smooth curves similar to Apple design language.
+
+ANIMATIONS AND MICRO-INTERACTIONS
+
+The UI should include smooth modern animations such as:
+
+• Page transition animations
+• Smooth modal opening
+• Button hover animations
+• Dropdown animations
+• Table loading skeletons
+• Smooth list updates when data changes
+
+Animations should feel soft and fluid, similar to iOS interface behavior.
+
+They should enhance usability but not feel distracting.
+
+USER EXPERIENCE GOAL
+
+The entire admin dashboard should feel like a premium SaaS product, not a traditional enterprise admin panel.
+
+It should feel:
+
+Fast
+Clean
+Modern
+Smooth
+Elegant
+
+Users should enjoy interacting with the system.
+
+FINAL GOAL
+
+After these improvements, the system should provide:
+
+• Clear product previews
+• Proper catalog preview before download
+• Fully working PDF export
+• Feature-rich content editing
+• Dynamic product category creation
+• Drag-and-drop image uploads
+• Dashboard updates for new categories
+• A modern premium UI inspired by Apple and CRED
+
+The final platform should feel like a high-end professional product management system rather than a basic admin tool.

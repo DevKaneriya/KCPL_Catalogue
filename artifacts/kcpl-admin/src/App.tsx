@@ -1,7 +1,8 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider, useAuth } from "./contexts/auth-context";
 
 // Pages
 import Dashboard from "./pages/dashboard";
@@ -13,7 +14,11 @@ import ContentPageForm from "./pages/content-page-form";
 import CatalogIndex from "./pages/catalog-index";
 import ExportCatalog from "./pages/export-catalog";
 import ActivityLogs from "./pages/activity-logs";
+import Users from "./pages/users";
+import Roles from "./pages/roles";
+import LoginPage from "./pages/login";
 import NotFound from "@/pages/not-found";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,28 +29,48 @@ const queryClient = new QueryClient({
   },
 });
 
+function ProtectedRoute({ component: Component, ...rest }: any) {
+  const { token } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!token) {
+      setLocation("/login");
+    }
+  }, [token, setLocation]);
+
+  if (!token) return null;
+
+  return <Route {...rest} component={Component} />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/login" component={LoginPage} />
+      <ProtectedRoute path="/" component={Dashboard} />
       
       {/* Product Routes */}
-      <Route path="/products/:categorySlug" component={Products} />
-      <Route path="/products/:categorySlug/new" component={ProductForm} />
-      <Route path="/products/:categorySlug/:id/edit" component={ProductForm} />
+      <ProtectedRoute path="/products/:categorySlug" component={Products} />
+      <ProtectedRoute path="/products/:categorySlug/new" component={ProductForm} />
+      <ProtectedRoute path="/products/:categorySlug/:id/edit" component={ProductForm} />
       
       {/* Category Routes */}
-      <Route path="/categories" component={Categories} />
+      <ProtectedRoute path="/categories" component={Categories} />
       
       {/* Content Pages */}
-      <Route path="/content" component={ContentPages} />
-      <Route path="/content/new" component={ContentPageForm} />
-      <Route path="/content/:id/edit" component={ContentPageForm} />
+      <ProtectedRoute path="/content" component={ContentPages} />
+      <ProtectedRoute path="/content/new" component={ContentPageForm} />
+      <ProtectedRoute path="/content/:id/edit" component={ContentPageForm} />
       
       {/* Tools */}
-      <Route path="/catalog-index" component={CatalogIndex} />
-      <Route path="/export" component={ExportCatalog} />
-      <Route path="/logs" component={ActivityLogs} />
+      <ProtectedRoute path="/catalog-index" component={CatalogIndex} />
+      <ProtectedRoute path="/export" component={ExportCatalog} />
+      <ProtectedRoute path="/logs" component={ActivityLogs} />
+
+      {/* Admin */}
+      <ProtectedRoute path="/users" component={Users} />
+      <ProtectedRoute path="/roles" component={Roles} />
 
       <Route component={NotFound} />
     </Switch>
@@ -57,7 +82,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <AuthProvider>
+            <Router />
+          </AuthProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

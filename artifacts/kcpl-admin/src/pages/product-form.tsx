@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQueryClient } from "@tanstack/react-query";
+import { ImageUpload } from "@/components/image-upload";
 
 const formSchema = z.object({
   categoryId: z.coerce.number().optional(),
@@ -24,7 +25,7 @@ const formSchema = z.object({
   engineBrand: z.string().optional(),
   productType: z.string().optional(),
   size: z.string().optional(),
-  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  imageUrl: z.string().optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -128,119 +129,149 @@ export default function ProductForm() {
 
   return (
     <Layout>
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate(`/products/${slug}`)} className="rounded-full">
+      <div className="flex items-center gap-4 mb-8">
+        <Button variant="ghost" size="icon" onClick={() => navigate(`/products/${slug}`)} className="rounded-full hover:bg-muted">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+          <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
             {isEdit ? "Edit Product" : "New Product"}
           </h1>
-          <p className="text-muted-foreground text-sm">Fill out the details below. All fields are optional.</p>
+          <p className="text-muted-foreground mt-1">Fill out the details below. All fields are optional.</p>
         </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-4xl">
-          <Card className="border-border/50 shadow-sm">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <FormField control={form.control} name="categoryId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select 
-                      onValueChange={(val) => field.onChange(parseInt(val))} 
-                      value={field.value?.toString() || ""}
-                    >
+        <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-5xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              {/* Main Details Card */}
+              <Card className="border-border/50 shadow-sm rounded-xl overflow-hidden">
+                <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
+                  <h3 className="font-semibold text-lg">Product Details</h3>
+                </div>
+                <CardContent className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField control={form.control} name="categoryId" render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Category</FormLabel>
+                        <Select 
+                          onValueChange={(val) => field.onChange(parseInt(val))} 
+                          value={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="bg-background h-11">
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories?.map(c => (
+                              <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="name" render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Product Name</FormLabel>
+                        <FormControl><Input placeholder="e.g. Premium Radiator" className="h-11" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="kcplCode" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>KCPL Code (Internal)</FormLabel>
+                        <FormControl><Input placeholder="e.g. KCP-102" className="font-mono h-11" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="skuCode" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SKU Code</FormLabel>
+                        <FormControl><Input placeholder="e.g. SKU-8849" className="font-mono h-11" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Specifications Card */}
+              <Card className="border-border/50 shadow-sm rounded-xl overflow-hidden">
+                <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
+                  <h3 className="font-semibold text-lg">Specifications</h3>
+                </div>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField control={form.control} name="vehicleBrand" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vehicle Brand</FormLabel>
+                        <FormControl><Input placeholder="e.g. Toyota, Honda" className="h-11" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="engineBrand" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Engine Brand/Model</FormLabel>
+                        <FormControl><Input placeholder="e.g. 2JZ-GTE" className="h-11" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="productType" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Product Type</FormLabel>
+                        <FormControl><Input placeholder="e.g. Aluminum" className="h-11" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="size" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dimensions / Size</FormLabel>
+                        <FormControl><Input placeholder="e.g. 600x400x42mm" className="h-11" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar / Image Upload */}
+            <div className="space-y-8">
+              <Card className="border-border/50 shadow-sm rounded-xl overflow-hidden">
+                <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
+                  <h3 className="font-semibold text-lg">Product Image</h3>
+                </div>
+                <CardContent className="p-6">
+                  <FormField control={form.control} name="imageUrl" render={({ field }) => (
+                    <FormItem>
                       <FormControl>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
+                        <ImageUpload value={field.value || ""} onChange={field.onChange} />
                       </FormControl>
-                      <SelectContent>
-                        {categories?.map(c => (
-                          <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </CardContent>
+              </Card>
 
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name</FormLabel>
-                    <FormControl><Input placeholder="e.g. Premium Radiator" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="kcplCode" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>KCPL Code (Internal)</FormLabel>
-                    <FormControl><Input placeholder="e.g. KCP-102" className="font-mono" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="skuCode" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>SKU Code</FormLabel>
-                    <FormControl><Input placeholder="e.g. SKU-8849" className="font-mono" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="vehicleBrand" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Vehicle Brand</FormLabel>
-                    <FormControl><Input placeholder="e.g. Toyota, Honda" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="engineBrand" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Engine Brand/Model</FormLabel>
-                    <FormControl><Input placeholder="e.g. 2JZ-GTE" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="productType" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Type</FormLabel>
-                    <FormControl><Input placeholder="e.g. Aluminum" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="size" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Dimensions / Size</FormLabel>
-                    <FormControl><Input placeholder="e.g. 600x400x42mm" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="imageUrl" render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl><Input placeholder="https://example.com/image.jpg" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+              <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm flex flex-col gap-4 sticky top-20">
+                <Button type="submit" disabled={isPending} size="lg" className="w-full shadow-lg shadow-primary/20 text-base">
+                  {isPending ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+                  {isEdit ? "Save Changes" : "Create Product"}
+                </Button>
+                <Button type="button" variant="outline" size="lg" onClick={() => navigate(`/products/${slug}`)} className="w-full">
+                  Cancel
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-          
-          <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => navigate(`/products/${slug}`)}>Cancel</Button>
-            <Button type="submit" disabled={isPending} className="hover-elevate shadow-lg shadow-primary/20 min-w-32">
-              {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              {isEdit ? "Save Changes" : "Create Product"}
-            </Button>
+            </div>
           </div>
         </form>
       </Form>
