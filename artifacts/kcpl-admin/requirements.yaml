@@ -1,0 +1,19 @@
+packages:
+  "recharts": "Dashboard analytics charts and data visualization"
+  "framer-motion": "Page transitions and smooth interactions"
+  "date-fns": "Human-readable date formatting for activity logs"
+  "react-hook-form": "Form state management"
+  "@hookform/resolvers": "Zod validation with react-hook-form"
+  "react-quill": "Rich text WYSIWYG editor for content pages"
+
+images:
+  - path: "artifacts/kcpl-admin/public/images/dashboard-bg.png"
+    description: "Abstract industrial metallic texture with subtle grid lines, very dark and professional, suitable for a header background"
+    aspect_ratio: "16:9"
+  - path: "artifacts/kcpl-admin/public/images/kcpl-logo-mark.png"
+    description: "Minimalist modern industrial logo mark resembling a radiator grille or cooling fins, monochrome white"
+    aspect_ratio: "1:1"
+
+notes:
+  - Assuming API client exports are available at @workspace/api-client-react
+  - WYSIWYG editor relies on react-quill

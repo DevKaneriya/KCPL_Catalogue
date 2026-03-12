@@ -1,0 +1,356 @@
+KCPL Catalog Automation System
+
+Build a web-based catalog automation admin platform for an automotive manufacturing company named KCPL.
+
+KCPL manufactures automotive cooling products such as:
+
+Radiators
+
+Condensers
+
+They maintain a large product catalog with hundreds of SKUs across these product types.
+
+Currently, every time a new product is added, the catalog must be manually updated by designers in Photoshop or CorelDraw, exported again, and redistributed.
+
+This is slow and inefficient.
+
+The goal of this project is to build a fully automated catalog management system where:
+
+• Products are stored in a structured database
+• Catalog pages are generated automatically
+• Index pages are generated dynamically
+• Non-product pages can be edited
+• Catalogs can be exported on demand
+
+The design templates remain fixed, but content becomes dynamic.
+
+CORE SYSTEM OBJECTIVE
+
+The system must allow KCPL staff to:
+
+Manage products
+
+Manage catalog content pages
+
+Create new product categories dynamically
+
+Automatically maintain catalog indexes
+
+Export catalogs in various formats
+
+The entire catalog must be generated dynamically from database data.
+
+SYSTEM MODULES
+
+The system should contain the following modules:
+
+Dashboard
+
+Product Modules
+
+SKU Management
+
+Content Management (Non-technical pages)
+
+Dynamic Product Category Creator
+
+Catalog Export Engine
+
+Activity Logs
+
+USER ROLE
+
+Initially assume single admin user, but architecture should allow multi-user expansion later.
+
+DASHBOARD PAGE
+
+The dashboard provides a high-level overview of catalog data.
+
+Display the following information:
+
+Total Radiator SKUs
+Total Condenser SKUs
+Total Products Across All Categories
+Last Catalog Update Timestamp
+Recent Activity Logs
+
+Include a Quick Export Catalog button directly on the dashboard.
+
+This allows the user to generate the catalog quickly.
+
+PRODUCT MODULE STRUCTURE
+
+Each product category should have its own module page.
+
+Initially there are two default product categories:
+
+Radiators
+Condensers
+
+Future categories must be supported dynamically.
+
+Each product module contains a list view of SKUs.
+
+SKU LIST VIEW
+
+The SKU list page must support large datasets.
+
+Implement:
+
+Pagination
+Search
+Filtering (optional but recommended)
+
+Each row displays:
+
+Product Image
+Product Name
+Vehicle Brand / Engine Brand
+Product Type
+Unique KCPL Code
+
+Actions available:
+
+View
+Edit
+Delete
+
+New SKUs should appear at the bottom of the list.
+
+ADD NEW SKU
+
+At the top of the page include:
+
+Add New Product
+
+Clicking this opens a SKU creation form.
+
+The form collects product information such as:
+
+Product Name
+Product Size
+Unique SKU Code
+KCPL Product Code
+Vehicle Brand
+Engine Brand
+Product Category
+Image Upload
+Other specifications
+
+Important rule:
+
+No field should be mandatory.
+
+Users must be able to save partially filled data.
+
+SKU EDITING
+
+Editing a SKU should load the same form used during creation, but pre-filled.
+
+Users can modify any field.
+
+Saving updates the database.
+
+SKU DELETION
+
+Deleting a SKU should:
+
+Remove it from the database
+Remove it from index references
+Remove it from catalog generation
+
+Ask for confirmation before deletion.
+
+AUTOMATIC INDEX GENERATION
+
+The system must maintain a catalog index automatically.
+
+When a SKU is created, it should be placed inside the index hierarchy.
+
+Example:
+
+Vehicle Brand: Tata
+Size: 450mm
+
+Index structure:
+
+Tata
+└ 450mm
+└ SKU entry
+
+Index pages must update automatically whenever SKUs are added or removed.
+
+CONTENT MANAGEMENT MODULE
+
+This module manages non-technical catalog pages.
+
+Examples include:
+
+Preface
+Introduction
+About Company
+Vision
+Company Overview
+
+These pages appear before product catalog pages.
+
+CONTENT MANAGEMENT FEATURES
+
+Admin users should be able to:
+
+Create new pages
+Edit pages
+Delete pages
+Reorder pages
+
+Each page contains:
+
+Page Title
+Rich Text Content
+Optional Images
+
+Use a WYSIWYG editor.
+
+Users must be able to add unlimited pages.
+
+Example:
+
+Existing pages:
+
+Preface
+Introduction
+About Company
+
+User adds:
+
+Vision
+
+The catalog should automatically include this page.
+
+PRODUCT CATEGORY CREATOR
+
+KCPL may introduce new product types in the future.
+
+Example:
+
+Oil Coolers
+Intercoolers
+Heat Exchangers
+
+The system must allow creating product categories dynamically.
+
+NEW PRODUCT CATEGORY CREATION
+
+User enters:
+
+Product Category Name
+Category Description
+
+Then configures SKU data structure.
+
+They define:
+
+Field Names
+Field Types
+Dropdown Values
+Indexing Logic
+
+Example fields:
+
+Product Name
+Engine Type
+Cooling Capacity
+Size
+Vehicle Brand
+Image
+
+Once created, the system automatically generates:
+
+Product module page
+SKU creation form
+Database structure
+Catalog mapping
+
+This allows unlimited product types.
+
+CATALOG EXPORT ENGINE
+
+Users must be able to export catalogs.
+
+Supported formats:
+
+PDF
+DOC
+CDR
+
+EXPORT CONFIGURATION SCREEN
+
+When the user clicks Download Catalog, show a section selection interface.
+
+This should behave like a print page selector.
+
+Users can select which sections to include.
+
+Example:
+
+Preface
+Introduction
+Company Information
+Index Pages
+Radiator Catalog
+Condenser Catalog
+Custom Product Catalogs
+
+Each section has a checkbox.
+
+If unchecked, it will not appear in the exported catalog.
+
+EXPORT GENERATION LOGIC
+
+The system generates the catalog dynamically in this order:
+
+Non-technical pages
+
+Index pages
+
+Product catalog pages
+
+Templates should be reusable.
+
+Each SKU should generate a structured product entry page.
+
+ACTIVITY LOGS
+
+Track system actions:
+
+Product created
+Product edited
+Product deleted
+Content edited
+Catalog exported
+
+Logs should show:
+
+User
+Action
+Timestamp
+
+PERFORMANCE REQUIREMENTS
+
+The system must support:
+
+Thousands of SKUs
+Multiple product categories
+Hundreds of catalog pages
+
+Queries should be optimized.
+
+UI DESIGN GOALS
+
+The admin interface must be:
+
+Clean
+Simple
+Non-technical user friendly
+
+Use a modern dashboard layout.

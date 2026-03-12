@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: KCPL Catalog Automation System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product SKU management
+  - name: categories
+    description: Product category management
+  - name: content
+    description: Content page management
+  - name: catalog
+    description: Catalog export and index
+  - name: logs
+    description: Activity logs
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,386 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all product categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductCategory"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a new product category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductCategory"
+
+  /categories/{id}:
+    get:
+      operationId: getCategory
+      tags: [categories]
+      summary: Get a product category by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Category found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductCategory"
+    put:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Update a product category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductCategory"
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete a product category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Category deleted
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products with pagination and filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+        - name: vehicleBrand
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated product list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a new product SKU
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Product deleted
+
+  /catalog-index:
+    get:
+      operationId: getCatalogIndex
+      tags: [catalog]
+      summary: Get the auto-generated catalog index
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Catalog index tree
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IndexNode"
+
+  /content-pages:
+    get:
+      operationId: listContentPages
+      tags: [content]
+      summary: List all content pages
+      responses:
+        "200":
+          description: List of content pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentPage"
+    post:
+      operationId: createContentPage
+      tags: [content]
+      summary: Create a new content page
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContentPageRequest"
+      responses:
+        "201":
+          description: Content page created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPage"
+
+  /content-pages/reorder:
+    put:
+      operationId: reorderContentPages
+      tags: [content]
+      summary: Reorder content pages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: integer
+              required: [ids]
+      responses:
+        "200":
+          description: Pages reordered
+
+  /content-pages/{id}:
+    get:
+      operationId: getContentPage
+      tags: [content]
+      summary: Get a content page by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Content page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPage"
+    put:
+      operationId: updateContentPage
+      tags: [content]
+      summary: Update a content page
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContentPageRequest"
+      responses:
+        "200":
+          description: Page updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPage"
+    delete:
+      operationId: deleteContentPage
+      tags: [content]
+      summary: Delete a content page
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Page deleted
+
+  /catalog/export:
+    post:
+      operationId: exportCatalog
+      tags: [catalog]
+      summary: Export catalog (trigger export job)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportCatalogRequest"
+      responses:
+        "200":
+          description: Export result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
+
+  /catalog/stats:
+    get:
+      operationId: getCatalogStats
+      tags: [catalog]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogStats"
+
+  /activity-logs:
+    get:
+      operationId: listActivityLogs
+      tags: [logs]
+      summary: List activity logs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityLogResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +419,260 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ProductCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        slug:
+          type: string
+        fieldSchema:
+          type: object
+          additionalProperties: true
+        productCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, slug, productCount, createdAt, updatedAt]
+
+    CreateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        slug:
+          type: string
+        fieldSchema:
+          type: object
+          additionalProperties: true
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        name:
+          type: string
+        skuCode:
+          type: string
+        kcplCode:
+          type: string
+        vehicleBrand:
+          type: string
+        engineBrand:
+          type: string
+        productType:
+          type: string
+        size:
+          type: string
+        imageUrl:
+          type: string
+        specifications:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, categoryId, createdAt, updatedAt]
+
+    CreateProductRequest:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        name:
+          type: string
+        skuCode:
+          type: string
+        kcplCode:
+          type: string
+        vehicleBrand:
+          type: string
+        engineBrand:
+          type: string
+        productType:
+          type: string
+        size:
+          type: string
+        imageUrl:
+          type: string
+        specifications:
+          type: object
+          additionalProperties: true
+
+    ProductListResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required: [products, total, page, limit, totalPages]
+
+    IndexNode:
+      type: object
+      properties:
+        brand:
+          type: string
+        sizes:
+          type: array
+          items:
+            type: object
+            properties:
+              size:
+                type: string
+              products:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+            required: [size, products]
+      required: [brand, sizes]
+
+    ContentPage:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        imageUrl:
+          type: string
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, title, sortOrder, createdAt, updatedAt]
+
+    CreateContentPageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        imageUrl:
+          type: string
+        sortOrder:
+          type: integer
+
+    ExportCatalogRequest:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [pdf, doc, cdr]
+        sections:
+          type: array
+          items:
+            type: string
+      required: [format, sections]
+
+    ExportResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        downloadUrl:
+          type: string
+        exportedAt:
+          type: string
+          format: date-time
+      required: [success, message, exportedAt]
+
+    CatalogStats:
+      type: object
+      properties:
+        totalRadiators:
+          type: integer
+        totalCondensers:
+          type: integer
+        totalProducts:
+          type: integer
+        lastUpdated:
+          type: string
+          format: date-time
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityLog"
+        categoryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+            required: [name, count]
+      required: [totalRadiators, totalCondensers, totalProducts, lastUpdated, recentActivity, categoryBreakdown]
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: integer
+        details:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, user, action, entityType, createdAt]
+
+    ActivityLogResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityLog"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [logs, total, page, limit]
