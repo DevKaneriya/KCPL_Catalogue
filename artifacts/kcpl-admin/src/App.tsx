@@ -19,6 +19,7 @@ import Roles from "./pages/roles";
 import LoginPage from "./pages/login";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,14 +31,22 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!token) {
+    if (!isLoading && !token) {
       setLocation("/login");
     }
-  }, [token, setLocation]);
+  }, [token, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!token) return null;
 

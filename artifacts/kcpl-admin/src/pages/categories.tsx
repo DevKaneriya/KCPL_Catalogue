@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useListCategories, useCreateCategory, useDeleteCategory } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Plus, Tags, Trash2, Loader2, FolderTree, X, ListPlus } from "lucide-react";
+import { Plus, Tags, Trash2, Loader2, FolderTree, X, ListPlus, Save } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";

@@ -44,7 +44,7 @@ export function AppSidebar() {
     return false;
   };
 
-  const isAdmin = user?.role?.name === 'Admin';
+  const isAdmin = user?.roleName === 'Admin' || user?.role?.name === 'Admin';
 
   return (
     <Sidebar variant="sidebar" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">

@@ -7,6 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useExportCatalog, useListCategories, useGetCatalogPreviewData } from "@workspace/api-client-react";
 import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, FileText, Settings2, Image as ImageIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ExportCatalog() {
@@ -315,6 +317,4 @@ export default function ExportCatalog() {
   );
 }
 
-// Ensure framer-motion is used for the success animation
-import { motion } from "framer-motion";
 
