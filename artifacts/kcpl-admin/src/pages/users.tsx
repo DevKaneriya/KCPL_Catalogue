@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Users as UsersIcon, Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function Users() {
   const { data: users, isLoading } = useListUsers();
@@ -21,6 +22,9 @@ export default function Users() {
   const deleteMutation = useDeleteUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { checkPermission } = useAuth();
+  
+  const canManage = checkPermission("users:write");
 
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -37,9 +41,9 @@ export default function Users() {
   const handleEdit = (user: any) => {
     setFormData({
       username: user.username,
-      email: user.email,
+      email: user.email || "",
       password: "",
-      roleId: user.roleId.toString()
+      roleId: user.roleId?.toString() ?? ""
     });
     setIsEdit(true);
     setEditingId(user.id);
@@ -87,7 +91,7 @@ export default function Users() {
     }
   };
 
-  const getRoleBadgeColor = (roleName: string) => {
+  const getRoleBadgeColor = (roleName: string | null | undefined) => {
     switch (roleName?.toLowerCase()) {
       case 'admin': return "bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20";
       case 'manager': return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-blue-500/20";
@@ -107,14 +111,15 @@ export default function Users() {
           <p className="text-muted-foreground mt-1">Manage system access and team members.</p>
         </div>
         
-        <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
-              <Plus className="w-4 h-4 mr-2" />
-              New User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+        {canManage && (
+          <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
+                <Plus className="w-4 h-4 mr-2" />
+                New User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>{isEdit ? "Edit User" : "Create New User"}</DialogTitle>
             </DialogHeader>
@@ -153,6 +158,7 @@ export default function Users() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm">
@@ -194,8 +200,8 @@ export default function Users() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={`font-medium ${getRoleBadgeColor(user.role?.name)}`}>
-                      {user.role?.name || 'No Role'}
+                    <Badge variant="outline" className={`font-medium ${getRoleBadgeColor(user.roleName)}`}>
+                      {user.roleName || 'No Role'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -205,20 +211,22 @@ export default function Users() {
                     {format(new Date(user.createdAt), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(user)} className="h-8 w-8 text-muted-foreground hover:text-primary">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDelete(user.id)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    {canManage && (
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(user)} className="h-8 w-8 text-muted-foreground hover:text-primary">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(user.id)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

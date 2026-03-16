@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 export async function seedAdminUser() {
   try {
-    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(usersTable);
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(usersTable);
     if (count > 0) return;
 
     const [adminRole] = await db.select().from(rolesTable).where(eq(rolesTable.name, "Admin"));

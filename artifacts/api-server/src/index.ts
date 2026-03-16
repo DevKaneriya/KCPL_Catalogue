@@ -1,3 +1,12 @@
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const envPath = path.resolve(__dirname, "../../../.env");
+dotenv.config({ path: envPath });
+console.log('Loaded env from', envPath, 'DATABASE_URL=', process.env.DATABASE_URL);
+
 import app from "./app";
 
 const rawPort = process.env["PORT"];

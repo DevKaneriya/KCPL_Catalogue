@@ -7,12 +7,18 @@ import { FileText, Plus, Edit, Trash2, GripVertical, Loader2 } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function ContentPages() {
-  const { data: pages, isLoading } = useListContentPages();
+  const { data: pages, isLoading, error } = useListContentPages();
   const deleteMutation = useDeleteContentPage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { checkPermission } = useAuth();
+  
+  const canWrite = checkPermission("content:write");
+  const safePages = Array.isArray(pages) ? [...pages].sort((a, b) => a.sortOrder - b.sortOrder) : [];
+
 
   const handleDelete = (id: number) => {
     if (confirm("Delete this page? It will be removed from the catalog immediately.")) {
@@ -39,18 +45,27 @@ export default function ContentPages() {
           <p className="text-muted-foreground mt-1">Manage static pages like Preface, Vision, and Introduction.</p>
         </div>
         
-        <Button asChild className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
-          <Link href="/content/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Content Page
-          </Link>
-        </Button>
+        {canWrite && (
+          <Button asChild className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
+            <Link href="/content/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Content Page
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="space-y-3">
         {isLoading ? (
           <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" /></div>
-        ) : pages?.length === 0 ? (
+        ) : error ? (
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardContent className="p-6 text-center">
+              <p className="text-sm text-destructive font-medium">Failed to load content pages.</p>
+              <p className="text-xs text-muted-foreground mt-2">{(error as any)?.message || "Please try again."}</p>
+            </CardContent>
+          </Card>
+        ) : safePages.length === 0 ? (
           <Card className="border-border/50 border-dashed">
             <CardContent className="p-12 text-center">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -59,7 +74,7 @@ export default function ContentPages() {
             </CardContent>
           </Card>
         ) : (
-          pages?.sort((a,b) => a.sortOrder - b.sortOrder).map((page) => (
+          safePages.map((page) => (
             <Card key={page.id} className="border-border/50 group transition-all duration-200 hover:border-primary/30">
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="cursor-move text-muted-foreground opacity-30 group-hover:opacity-100 transition-opacity">
@@ -84,21 +99,25 @@ export default function ContentPages() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" asChild className="hover-elevate">
-                    <Link href={`/content/${page.id}/edit`}>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </Link>
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(page.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {canWrite && (
+                    <>
+                      <Button variant="outline" size="sm" asChild className="hover-elevate">
+                        <Link href={`/content/${page.id}/edit`}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Link>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(page.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -14,4 +14,5 @@ export interface User {
   roleName?: string;
   isActive: boolean;
   createdAt: Date;
+  permissions?: string[];
 }

@@ -31,14 +31,14 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
-  const { token, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !token) {
+    if (!isLoading && !user) {
       setLocation("/login");
     }
-  }, [token, isLoading, setLocation]);
+  }, [user, isLoading, setLocation]);
 
   if (isLoading) {
     return (
@@ -48,7 +48,7 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
     );
   }
 
-  if (!token) return null;
+  if (!user) return null;
 
   return <Route {...rest} component={Component} />;
 }

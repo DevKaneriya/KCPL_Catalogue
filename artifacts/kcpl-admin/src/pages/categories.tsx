@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/auth-context";
 
 type FieldDefinition = {
   name: string;
@@ -28,6 +29,10 @@ export default function Categories() {
   const deleteMutation = useDeleteCategory();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { checkPermission } = useAuth();
+  
+  const canManage = checkPermission("categories:write");
+
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({ name: "", description: "", slug: "" });
   const [fields, setFields] = useState<FieldDefinition[]>([]);
@@ -109,125 +114,127 @@ export default function Categories() {
           <p className="text-muted-foreground mt-1">Manage product categories and metadata schemas.</p>
         </div>
         
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Category
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-            <DialogHeader className="p-6 pb-2">
-              <DialogTitle className="text-2xl font-display">Create New Category</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <ScrollArea className="flex-1 px-6 pb-4">
-                <div className="space-y-6">
-                  {/* Basic Details */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input id="name" value={formData.name} onChange={handleNameChange} required placeholder="e.g. Intercoolers" className="h-11" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="slug">Slug</Label>
-                      <Input id="slug" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} required className="bg-muted/50 font-mono text-sm h-11" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Optional description..." className="min-h-24" />
-                    </div>
-                  </div>
-
-                  {/* Schema Builder */}
-                  <div className="pt-6 border-t border-border/50">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <Label className="text-base font-semibold">SKU Form Fields (Schema)</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">Define custom fields for products in this category.</p>
+        {canManage && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+              <DialogHeader className="p-6 pb-2">
+                <DialogTitle className="text-2xl font-display">Create New Category</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <ScrollArea className="flex-1 px-6 pb-4">
+                  <div className="space-y-6">
+                    {/* Basic Details */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" value={formData.name} onChange={handleNameChange} required placeholder="e.g. Intercoolers" className="h-11" />
                       </div>
-                      <Button type="button" variant="outline" size="sm" onClick={addField} className="h-8">
-                        <ListPlus className="w-4 h-4 mr-2" />
-                        Add Field
-                      </Button>
+                      <div className="space-y-2">
+                        <Label htmlFor="slug">Slug</Label>
+                        <Input id="slug" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} required className="bg-muted/50 font-mono text-sm h-11" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea id="description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Optional description..." className="min-h-24" />
+                      </div>
                     </div>
 
-                    <div className="space-y-3">
-                      {fields.map((field, index) => (
-                        <div key={index} className="flex gap-2 items-start p-3 bg-muted/20 border border-border/50 rounded-lg relative group">
-                          <div className="flex-1 space-y-3">
-                            <div className="flex gap-2">
-                              <div className="flex-1">
-                                <Label className="text-xs mb-1 block">Field Label</Label>
-                                <Input 
-                                  value={field.name} 
-                                  onChange={(e) => updateField(index, { name: e.target.value })} 
-                                  placeholder="e.g. Core Material" 
-                                  className="h-9"
-                                  required
-                                />
+                    {/* Schema Builder */}
+                    <div className="pt-6 border-t border-border/50">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <Label className="text-base font-semibold">SKU Form Fields (Schema)</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">Define custom fields for products in this category.</p>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={addField} className="h-8">
+                          <ListPlus className="w-4 h-4 mr-2" />
+                          Add Field
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {fields.map((field, index) => (
+                          <div key={index} className="flex gap-2 items-start p-3 bg-muted/20 border border-border/50 rounded-lg relative group">
+                            <div className="flex-1 space-y-3">
+                              <div className="flex gap-2">
+                                <div className="flex-1">
+                                  <Label className="text-xs mb-1 block">Field Label</Label>
+                                  <Input 
+                                    value={field.name} 
+                                    onChange={(e) => updateField(index, { name: e.target.value })} 
+                                    placeholder="e.g. Core Material" 
+                                    className="h-9"
+                                    required
+                                  />
+                                </div>
+                                <div className="w-[140px]">
+                                  <Label className="text-xs mb-1 block">Type</Label>
+                                  <Select value={field.type} onValueChange={(val) => updateField(index, { type: val })}>
+                                    <SelectTrigger className="h-9 bg-background">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="text">Text</SelectItem>
+                                      <SelectItem value="number">Number</SelectItem>
+                                      <SelectItem value="dropdown">Dropdown</SelectItem>
+                                      <SelectItem value="textarea">Textarea</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
-                              <div className="w-[140px]">
-                                <Label className="text-xs mb-1 block">Type</Label>
-                                <Select value={field.type} onValueChange={(val) => updateField(index, { type: val })}>
-                                  <SelectTrigger className="h-9 bg-background">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="text">Text</SelectItem>
-                                    <SelectItem value="number">Number</SelectItem>
-                                    <SelectItem value="dropdown">Dropdown</SelectItem>
-                                    <SelectItem value="textarea">Textarea</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              
+                              {field.type === 'dropdown' && (
+                                <div>
+                                  <Label className="text-xs mb-1 block">Options (comma separated)</Label>
+                                  <Input 
+                                    value={field.options?.join(', ') || ''} 
+                                    onChange={(e) => updateField(index, { options: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} 
+                                    placeholder="e.g. Aluminum, Copper, Brass" 
+                                    className="h-9"
+                                    required
+                                  />
+                                </div>
+                              )}
                             </div>
                             
-                            {field.type === 'dropdown' && (
-                              <div>
-                                <Label className="text-xs mb-1 block">Options (comma separated)</Label>
-                                <Input 
-                                  value={field.options?.join(', ') || ''} 
-                                  onChange={(e) => updateField(index, { options: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} 
-                                  placeholder="e.g. Aluminum, Copper, Brass" 
-                                  className="h-9"
-                                  required
-                                />
-                              </div>
-                            )}
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => removeField(index)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 mt-6"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
                           </div>
-                          
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => removeField(index)}
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 mt-6"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      {fields.length === 0 && (
-                        <div className="text-center py-6 bg-muted/10 border border-dashed border-border rounded-lg text-muted-foreground text-sm">
-                          No custom fields defined. Products will only have standard fields.
-                        </div>
-                      )}
+                        ))}
+                        {fields.length === 0 && (
+                          <div className="text-center py-6 bg-muted/10 border border-dashed border-border rounded-lg text-muted-foreground text-sm">
+                            No custom fields defined. Products will only have standard fields.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                </ScrollArea>
+                
+                <div className="p-6 pt-4 border-t border-border bg-background flex justify-end gap-3 mt-auto">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={createMutation.isPending} className="min-w-32 shadow-lg shadow-primary/20">
+                    {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Create Category
+                  </Button>
                 </div>
-              </ScrollArea>
-              
-              <div className="p-6 pt-4 border-t border-border bg-background flex justify-end gap-3 mt-auto">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={createMutation.isPending} className="min-w-32 shadow-lg shadow-primary/20">
-                  {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Create Category
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card className="border-border/50 shadow-sm rounded-xl overflow-hidden">
@@ -292,15 +299,17 @@ export default function Categories() {
                         {format(new Date(cat.createdAt), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell className="text-right py-4 pr-6">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleDelete(cat.id)}
-                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all h-9 w-9"
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {canManage && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDelete(cat.id)}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all h-9 w-9"
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

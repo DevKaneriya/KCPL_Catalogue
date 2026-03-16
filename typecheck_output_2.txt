@@ -1,0 +1,29 @@
+
+> workspace@0.0.0 typecheck D:\icarus-office\KCPL\catalog-Automation-latest\Catalog-Automation
+> pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+
+
+> workspace@0.0.0 typecheck:libs D:\icarus-office\KCPL\catalog-Automation-latest\Catalog-Automation
+> tsc --build
+
+Scope: 4 of 9 workspace projects
+artifacts/api-server typecheck$ tsc -p tsconfig.json --noEmit
+artifacts/mockup-sandbox typecheck$ tsc -p tsconfig.json --noEmit
+artifacts/kcpl-admin typecheck$ tsc -p tsconfig.json --noEmit
+scripts typecheck$ tsc -p tsconfig.json --noEmit
+scripts typecheck: Done
+artifacts/api-server typecheck: src/routes/categories.ts(27,99): error TS2551: Property 'returning' does not exist on type 'MySqlInsertBase<MySqlTableWithColumns<{ name: "categories"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "categories"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 5 more ...; upd...'. Did you mean '$returningId'?
+artifacts/api-server typecheck: src/routes/categories.ts(35,153): error TS2339: Property 'returning' does not exist on type 'Omit<MySqlUpdateBase<MySqlTableWithColumns<{ name: "categories"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "categories"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 5 more ......'.
+artifacts/api-server typecheck: src/routes/content-pages.ts(22,117): error TS2551: Property 'returning' does not exist on type 'MySqlInsertBase<MySqlTableWithColumns<{ name: "content_pages"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "content_pages"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; ... 8 more ...; generated: undefined; }, {}, {}>; ... 5 more ...; updatedAt: M...'. Did you mean '$returningId'?
+artifacts/api-server typecheck: src/routes/content-pages.ts(39,157): error TS2339: Property 'returning' does not exist on type 'Omit<MySqlUpdateBase<MySqlTableWithColumns<{ name: "content_pages"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "content_pages"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; ... 8 more ...; generated: undefined; }, {}, {}>; ... 5 more ...; updated...'.
+artifacts/api-server typecheck: src/routes/products.ts(93,172): error TS2551: Property 'returning' does not exist on type 'MySqlInsertBase<MySqlTableWithColumns<{ name: "products"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "products"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 11 more ...; update...'. Did you mean '$returningId'?
+artifacts/api-server typecheck: src/routes/products.ts(101,224): error TS2339: Property 'returning' does not exist on type 'Omit<MySqlUpdateBase<MySqlTableWithColumns<{ name: "products"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "products"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 11 more ...; u...'.
+artifacts/api-server typecheck: src/routes/roles.ts(18,108): error TS2551: Property 'returning' does not exist on type 'MySqlInsertBase<MySqlTableWithColumns<{ name: "roles"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "roles"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; hasDefault: true; ... 6 more ...; generated: undefined; }, {}, {}>; ... 4 more ...'. Did you mean '$returningId'?
+artifacts/api-server typecheck: src/routes/roles.ts(25,157): error TS2339: Property 'returning' does not exist on type 'Omit<MySqlUpdateBase<MySqlTableWithColumns<{ name: "roles"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "roles"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 4 more ...; updatedA...'.
+artifacts/api-server typecheck: src/routes/users.ts(21,128): error TS2551: Property 'returning' does not exist on type 'MySqlInsertBase<MySqlTableWithColumns<{ name: "users"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "users"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; hasDefault: true; ... 6 more ...; generated: undefined; }, {}, {}>; ... 6 more ...'. Did you mean '$returningId'?
+artifacts/api-server typecheck: src/routes/users.ts(34,88): error TS2339: Property 'returning' does not exist on type 'Omit<MySqlUpdateBase<MySqlTableWithColumns<{ name: "users"; schema: undefined; columns: { id: MySqlColumn<{ name: "id"; tableName: "users"; dataType: "number"; columnType: "MySqlInt"; data: number; driverParam: string | number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 6 more ...; updatedA...'.
+artifacts/api-server typecheck: Failed
+D:\icarus-office\KCPL\catalog-Automation-latest\Catalog-Automation\artifacts\api-server:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/api-server@0.0.0 typecheck: `tsc -p tsconfig.json --noEmit`
+Exit status 2
+ ELIFECYCLE  Command failed with exit code 2.

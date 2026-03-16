@@ -34,7 +34,7 @@ function RichTextEditor({ value, onChange }: { value: string; onChange: (val: st
 
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value, false);
+      editor.commands.setContent(value || '');
     }
   }, [value, editor]);
 
@@ -128,7 +128,7 @@ export default function ContentPageForm() {
   const queryClient = useQueryClient();
 
   const { data: page, isLoading } = useGetContentPage(pageId || 0, {
-    query: { enabled: isEdit && !!pageId }
+    query: { enabled: isEdit && !!pageId, queryKey: [`/api/content-pages/${pageId}`] }
   });
 
   const createMutation = useCreateContentPage();
@@ -150,7 +150,10 @@ export default function ContentPageForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title) return toast({ title: "Title is required", variant: "destructive" });
+    if (!title) {
+      toast({ title: "Title is required", variant: "destructive" });
+      return;
+    }
 
     const payload = {
       title,
