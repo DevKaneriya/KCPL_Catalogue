@@ -26,6 +26,7 @@ export interface User {
   roleName?: string;
   isActive: boolean;
   createdAt: string;
+  permissions?: string[];
 }
 
 export interface LoginResponse {

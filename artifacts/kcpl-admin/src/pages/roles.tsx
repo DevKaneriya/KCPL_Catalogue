@@ -12,13 +12,15 @@ import { useListRoles, useCreateRole, useUpdateRole, useDeleteRole } from "@work
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Plus, Edit, Trash2, Loader2, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
 
 const AVAILABLE_PERMISSIONS = [
   { id: "products:write", label: "Create & Edit Products" },
   { id: "products:delete", label: "Delete Products" },
   { id: "categories:write", label: "Manage Categories" },
-  { id: "content:write", label: "Edit Content Pages" },
-  { id: "export", label: "Export Catalogs" },
+  { id: "catalog:read", label: "View Catalog Index" },
+  { id: "content:write", label: "Manage Content Pages" },
+  { id: "export", label: "Export Catalogs (Export Engine)" },
   { id: "users:write", label: "Manage Users" },
   { id: "roles:write", label: "Manage Roles" }
 ];
@@ -30,6 +32,9 @@ export default function Roles() {
   const deleteMutation = useDeleteRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { checkPermission } = useAuth();
+  
+  const canManage = checkPermission("roles:write");
 
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -48,10 +53,23 @@ export default function Roles() {
   };
 
   const handleEdit = (role: any) => {
+    let perms = [];
+    if (Array.isArray(role.permissions)) {
+      perms = role.permissions;
+    } else if (typeof role.permissions === 'string') {
+      try {
+        perms = JSON.parse(role.permissions);
+      } catch (e) {
+        perms = [];
+      }
+    }
+    
+    console.log(`[ROLES] Editing role ${role.id}, loaded permissions:`, perms);
+    
     setFormData({
       name: role.name,
       description: role.description || "",
-      permissions: Array.isArray(role.permissions) ? role.permissions : []
+      permissions: perms
     });
     setIsEdit(true);
     setEditingId(role.id);
@@ -59,36 +77,52 @@ export default function Roles() {
   };
 
   const togglePermission = (permId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      permissions: prev.permissions.includes(permId)
-        ? prev.permissions.filter(p => p !== permId)
-        : [...prev.permissions, permId]
-    }));
+    console.log(`[ROLES] Toggling permission: ${permId}`);
+    setFormData(prev => {
+      const current = Array.isArray(prev.permissions) ? prev.permissions : [];
+      const updated = current.includes(permId)
+        ? current.filter(p => p !== permId)
+        : [...current, permId];
+      
+      console.log(`[ROLES] Updated permissions:`, updated);
+      return {
+        ...prev,
+        permissions: updated
+      };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(`[ROLES] Submitting ${isEdit ? 'update' : 'create'} with data:`, formData);
     
     if (isEdit && editingId) {
       updateMutation.mutate({ id: editingId, data: formData }, {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log(`[ROLES] Update success:`, data);
           toast({ title: "Role updated successfully" });
           setOpen(false);
           resetForm();
           queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
         },
-        onError: (err: any) => toast({ title: "Update failed", description: err.message, variant: "destructive" })
+        onError: (err: any) => {
+          console.error(`[ROLES] Update error:`, err);
+          toast({ title: "Update failed", description: err.message, variant: "destructive" });
+        }
       });
     } else {
       createMutation.mutate({ data: formData }, {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log(`[ROLES] Create success:`, data);
           toast({ title: "Role created successfully" });
           setOpen(false);
           resetForm();
           queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
         },
-        onError: (err: any) => toast({ title: "Creation failed", description: err.message, variant: "destructive" })
+        onError: (err: any) => {
+          console.error(`[ROLES] Create error:`, err);
+          toast({ title: "Creation failed", description: err.message, variant: "destructive" });
+        }
       });
     }
   };
@@ -116,14 +150,15 @@ export default function Roles() {
           <p className="text-muted-foreground mt-1">Define access levels and capabilities for team members.</p>
         </div>
         
-        <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
-              <Plus className="w-4 h-4 mr-2" />
-              New Role
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+        {canManage && (
+          <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button className="hover-elevate shadow-lg shadow-primary/20 shrink-0">
+                <Plus className="w-4 h-4 mr-2" />
+                New Role
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>{isEdit ? "Edit Role" : "Create New Role"}</DialogTitle>
             </DialogHeader>
@@ -162,6 +197,7 @@ export default function Roles() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {isLoading ? (
@@ -179,12 +215,16 @@ export default function Roles() {
                     <CardDescription className="mt-1 line-clamp-2">{role.description || 'No description provided.'}</CardDescription>
                   </div>
                   <div className="flex gap-1 -mr-2 -mt-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(role)} className="h-8 w-8 text-muted-foreground hover:text-primary">
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(role.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {canManage && (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(role)} className="h-8 w-8 text-muted-foreground hover:text-primary">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(role.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardHeader>

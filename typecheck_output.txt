@@ -1,0 +1,37 @@
+
+> workspace@0.0.0 typecheck D:\icarus-office\KCPL\catalog-Automation-latest\Catalog-Automation
+> pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+
+
+> workspace@0.0.0 typecheck:libs D:\icarus-office\KCPL\catalog-Automation-latest\Catalog-Automation
+> tsc --build
+
+Scope: 4 of 9 workspace projects
+artifacts/api-server typecheck$ tsc -p tsconfig.json --noEmit
+scripts typecheck$ tsc -p tsconfig.json --noEmit
+artifacts/kcpl-admin typecheck$ tsc -p tsconfig.json --noEmit
+artifacts/mockup-sandbox typecheck$ tsc -p tsconfig.json --noEmit
+scripts typecheck: Done
+artifacts/api-server typecheck: Done
+artifacts/mockup-sandbox typecheck: Done
+artifacts/kcpl-admin typecheck: src/components/app-sidebar.tsx(47,55): error TS2339: Property 'role' does not exist on type 'UserData'.
+artifacts/kcpl-admin typecheck: src/components/app-sidebar.tsx(220,89): error TS2339: Property 'role' does not exist on type 'UserData'.
+artifacts/kcpl-admin typecheck: src/pages/content-page-form.tsx(37,41): error TS2559: Type 'false' has no properties in common with type 'SetContentOptions'.
+artifacts/kcpl-admin typecheck: src/pages/content-page-form.tsx(131,5): error TS2741: Property 'queryKey' is missing in type '{ enabled: boolean; }' but required in type 'UseQueryOptions<ContentPage, ErrorType<unknown>, ContentPage, readonly unknown[]>'.
+artifacts/kcpl-admin typecheck: src/pages/content-page-form.tsx(151,24): error TS7030: Not all code paths return a value.
+artifacts/kcpl-admin typecheck: src/pages/export-catalog.tsx(30,30): error TS2339: Property 'isLoading' does not exist on type 'UseMutationResult<CatalogPreviewData, ErrorType<unknown>, { data: GetCatalogPreviewDataBody; }, unknown>'.
+artifacts/kcpl-admin typecheck: src/pages/export-catalog.tsx(32,5): error TS2554: Expected 0-1 arguments, but got 2.
+artifacts/kcpl-admin typecheck: src/pages/export-catalog.tsx(50,24): error TS7030: Not all code paths return a value.
+artifacts/kcpl-admin typecheck: src/pages/export-catalog.tsx(171,106): error TS7030: Not all code paths return a value.
+artifacts/kcpl-admin typecheck: src/pages/login.tsx(28,26): error TS2345: Argument of type 'User' is not assignable to parameter of type 'UserData'.
+artifacts/kcpl-admin typecheck:   Types of property 'email' are incompatible.
+artifacts/kcpl-admin typecheck:     Type 'string | undefined' is not assignable to type 'string'.
+artifacts/kcpl-admin typecheck:       Type 'undefined' is not assignable to type 'string'.
+artifacts/kcpl-admin typecheck: src/pages/product-form.tsx(47,5): error TS2741: Property 'queryKey' is missing in type '{ enabled: boolean; }' but required in type 'UseQueryOptions<Product, ErrorType<unknown>, Product, readonly unknown[]>'.
+artifacts/kcpl-admin typecheck: src/pages/users.tsx(197,95): error TS2339: Property 'role' does not exist on type 'User'.
+artifacts/kcpl-admin typecheck: src/pages/users.tsx(198,29): error TS2339: Property 'role' does not exist on type 'User'.
+artifacts/kcpl-admin typecheck: Failed
+D:\icarus-office\KCPL\catalog-Automation-latest\Catalog-Automation\artifacts\kcpl-admin:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/kcpl-admin@0.0.0 typecheck: `tsc -p tsconfig.json --noEmit`
+Exit status 2
+ ELIFECYCLE  Command failed with exit code 2.

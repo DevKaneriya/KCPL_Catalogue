@@ -10,6 +10,43 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { PackageSearch, Plus, Search, Edit, Trash2, ImageOff, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
+
+const normalizeImageSrc = (src?: string | null) => {
+  if (!src) return "";
+  const trimmed = src.trim();
+  if (!trimmed) return "";
+  if (
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("/")
+  ) {
+    return trimmed;
+  }
+  const isBase64 = /^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length > 200;
+  return isBase64 ? `data:image/jpeg;base64,${trimmed}` : trimmed;
+};
+
+function ProductImage({ src, alt }: { src?: string | null; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const normalized = normalizeImageSrc(src);
+
+  if (!normalized || failed) {
+    return <ImageOff className="w-6 h-6 text-muted-foreground opacity-40" />;
+  }
+
+  return (
+    <img
+      src={normalized}
+      alt={alt}
+      className="w-full h-full object-contain"
+      onError={() => setFailed(true)}
+      loading="lazy"
+    />
+  );
+}
 
 export default function Products() {
   const [, params] = useRoute("/products/:categorySlug");
@@ -35,6 +72,10 @@ export default function Products() {
   const deleteMutation = useDeleteProduct();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { checkPermission, user } = useAuth();
+  
+  const canWrite = checkPermission("products:write");
+  const canDelete = checkPermission("products:delete");
 
   const handleDelete = (id: number) => {
     if (confirm("Delete this product? This action cannot be undone.")) {
@@ -72,12 +113,14 @@ export default function Products() {
             <Download className="w-4 h-4 mr-2" />
             Download {currentCategory ? currentCategory.name : 'All'} Catalog
           </Button>
-          <Button asChild className="hover-elevate shadow-lg shadow-primary/20">
-            <Link href={slug && slug !== 'all' ? `/products/${slug}/new` : "/products/all/new"}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Product
-            </Link>
-          </Button>
+          {canWrite && (
+            <Button asChild className="hover-elevate shadow-lg shadow-primary/20">
+              <Link href={slug && slug !== 'all' ? `/products/${slug}/new` : "/products/all/new"}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Product
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -129,15 +172,17 @@ export default function Products() {
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.products?.map((product) => (
+                data?.products?.map((product) => {
+                  const imageSrc = normalizeImageSrc(product.imageUrl);
+                  return (
                   <TableRow key={product.id} className="group hover:bg-muted/20 transition-colors">
                     <TableCell className="py-3">
-                      <div className="w-20 h-20 rounded-lg border border-border/60 bg-background flex items-center justify-center overflow-hidden shadow-sm">
-                        {product.imageUrl ? (
-                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
-                        ) : (
-                          <ImageOff className="w-6 h-6 text-muted-foreground opacity-30" />
-                        )}
+                      <div
+                        className="w-32 h-24 rounded-lg border border-border/60 bg-background flex items-center justify-center overflow-hidden shadow-sm cursor-zoom-in p-1"
+                        onClick={() => imageSrc && window.open(imageSrc, "_blank")}
+                        title={imageSrc ? "Open full image" : "No image"}
+                      >
+                        <ProductImage src={imageSrc} alt={product.name || "Product image"} />
                       </div>
                     </TableCell>
                     <TableCell className="py-3">
@@ -159,31 +204,36 @@ export default function Products() {
                         {product.size && <span className="text-xs text-muted-foreground">{product.size}</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3">
-                      <Badge variant="secondary" className="bg-primary/5 text-primary hover:bg-primary/10 border-primary/20">
-                        {categories?.find(c => c.id === product.categoryId)?.name || 'Uncategorized'}
-                      </Badge>
-                    </TableCell>
+                  <TableCell className="py-3">
+                    <Badge variant="secondary" className="bg-primary/5 text-primary hover:bg-primary/10 border-primary/20">
+                        {product.categoryName || categories?.find(c => c.id === product.categoryId)?.name || 'Uncategorized'}
+                    </Badge>
+                  </TableCell>
                     <TableCell className="text-right py-3">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="outline" size="icon" asChild className="h-9 w-9 bg-background hover:text-primary hover:border-primary/50 shadow-sm">
-                          <Link href={`/products/${slug || 'all'}/${product.id}/edit`}>
-                            <Edit className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-9 w-9 bg-background hover:text-destructive hover:border-destructive/50 shadow-sm"
-                          onClick={() => handleDelete(product.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <div className="flex justify-end gap-2 transition-opacity">
+                        {canWrite && (
+                          <Button variant="outline" size="icon" asChild className="h-9 w-9 bg-background hover:text-primary hover:border-primary/50 shadow-sm">
+                            <Link href={`/products/${slug || 'all'}/${product.id}/edit`}>
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-9 w-9 bg-background hover:text-destructive hover:border-destructive/50 shadow-sm"
+                            onClick={() => handleDelete(product.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                );
+                })
               )}
             </TableBody>
           </Table>

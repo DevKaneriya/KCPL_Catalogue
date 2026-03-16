@@ -13,6 +13,8 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [inputType, setInputType] = useState<"file" | "url">("file");
   const [urlInput, setUrlInput] = useState("");
+  const MAX_DIMENSION = 1200;
+  const JPEG_QUALITY = 0.85;
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -38,11 +40,40 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
   );
 
   const handleFile = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target?.result) {
-        onChange(e.target.result as string);
-      }
+      const src = e.target?.result;
+      if (!src || typeof src !== "string") return;
+
+      const img = new Image();
+      img.onload = () => {
+        const maxSide = Math.max(img.width, img.height);
+        const scale = maxSide > MAX_DIMENSION ? MAX_DIMENSION / maxSide : 1;
+        const targetWidth = Math.max(1, Math.round(img.width * scale));
+        const targetHeight = Math.max(1, Math.round(img.height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          onChange(src);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        const forceJpeg = file.type === "image/png" && file.size > 1_000_000;
+        const outputType = forceJpeg ? "image/jpeg" : file.type;
+        const dataUrl = outputType === "image/jpeg"
+          ? canvas.toDataURL(outputType, JPEG_QUALITY)
+          : canvas.toDataURL(outputType);
+
+        onChange(dataUrl);
+      };
+      img.onerror = () => onChange(src);
+      img.src = src;
     };
     reader.readAsDataURL(file);
   };
@@ -64,8 +95,8 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
   return (
     <div className="space-y-4">
       {value ? (
-        <div className="relative group rounded-xl overflow-hidden border border-border/50 bg-muted/20 aspect-video flex items-center justify-center">
-          <img src={value} alt="Uploaded preview" className="max-w-full max-h-full object-contain" />
+        <div className="relative group rounded-xl overflow-hidden border border-border/50 bg-muted/20 flex items-center justify-center min-h-[180px] max-h-[260px]">
+          <img src={value} alt="Uploaded preview" className="max-w-full max-h-[240px] object-contain" />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
             <Button type="button" variant="destructive" size="sm" onClick={() => onChange("")}>
               <X className="w-4 h-4 mr-2" />

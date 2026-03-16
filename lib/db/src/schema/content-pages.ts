@@ -1,15 +1,15 @@
-import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { mysqlTable, int, text, timestamp, longtext } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const contentPagesTable = pgTable("content_pages", {
-  id: serial("id").primaryKey(),
+export const contentPagesTable = mysqlTable("content_pages", {
+  id: int("id").primaryKey().autoincrement(),
   title: text("title").notNull(),
-  content: text("content"),
-  imageUrl: text("image_url"),
-  sortOrder: integer("sort_order").default(0).notNull(),
+  content: longtext("content"),
+  imageUrl: longtext("image_url"),
+  sortOrder: int("sort_order").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 export const insertContentPageSchema = createInsertSchema(contentPagesTable).omit({ id: true, createdAt: true, updatedAt: true });

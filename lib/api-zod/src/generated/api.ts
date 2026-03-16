@@ -31,6 +31,7 @@ export const LoginResponse = zod.object({
     roleName: zod.string().optional(),
     isActive: zod.boolean(),
     createdAt: zod.date(),
+    permissions: zod.array(zod.string()).optional(),
   }),
   token: zod.string(),
 });
@@ -46,6 +47,7 @@ export const GetMeResponse = zod.object({
   roleName: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.date(),
+  permissions: zod.array(zod.string()).optional(),
 });
 
 /**
@@ -59,6 +61,7 @@ export const ListUsersResponseItem = zod.object({
   roleName: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.date(),
+  permissions: zod.array(zod.string()).optional(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
 
@@ -95,6 +98,7 @@ export const UpdateUserResponse = zod.object({
   roleName: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.date(),
+  permissions: zod.array(zod.string()).optional(),
 });
 
 /**

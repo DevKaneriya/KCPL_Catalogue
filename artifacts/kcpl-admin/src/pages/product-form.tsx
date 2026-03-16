@@ -17,7 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ImageUpload } from "@/components/image-upload";
 
 const formSchema = z.object({
-  categoryId: z.coerce.number().optional(),
+  categoryId: z.coerce.number({ required_error: "Category is required" }),
   name: z.string().optional(),
   skuCode: z.string().optional(),
   kcplCode: z.string().optional(),
@@ -44,8 +44,12 @@ export default function ProductForm() {
   
   const { data: categories } = useListCategories();
   const { data: product, isLoading: isLoadingProduct } = useGetProduct(productId || 0, {
-    query: { enabled: isEdit && !!productId }
+    query: { enabled: isEdit && !!productId, queryKey: [`/api/products/${productId}`] }
   });
+
+  const currentCategoryOption = product?.categoryId && !categories?.some(c => c.id === product.categoryId)
+    ? { id: product.categoryId, name: product.categoryName || `Category ${product.categoryId}` }
+    : null;
   
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
@@ -67,8 +71,9 @@ export default function ProductForm() {
 
   useEffect(() => {
     if (product && isEdit) {
+      console.log("DEBUG: Setting form values from product", product);
       form.reset({
-        categoryId: product.categoryId,
+        categoryId: Number(product.categoryId),
         name: product.name || "",
         skuCode: product.skuCode || "",
         kcplCode: product.kcplCode || "",
@@ -80,9 +85,12 @@ export default function ProductForm() {
       });
     } else if (!isEdit && categories && slug && slug !== 'all') {
       const cat = categories.find(c => c.slug === slug);
-      if (cat) form.setValue('categoryId', cat.id);
+      if (cat) {
+        console.log("DEBUG: Setting default category ID", cat.id);
+        form.setValue('categoryId', cat.id);
+      }
     }
-  }, [product, isEdit, categories, slug, form]);
+  }, [product, isEdit, categories, slug, form.reset, form.setValue]);
 
   const onSubmit = (values: FormValues) => {
     // Clean empty strings to undefined for API
@@ -92,11 +100,12 @@ export default function ProductForm() {
 
     if (isEdit && productId) {
       updateMutation.mutate(
-        { id: productId, data: cleanValues },
+        { id: productId, data: cleanValues as any },
         {
           onSuccess: () => {
             toast({ title: "Product updated successfully" });
             queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+            queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}`] });
             navigate(`/products/${slug}`);
           },
           onError: (err: any) => {
@@ -165,6 +174,11 @@ export default function ProductForm() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            {currentCategoryOption && (
+                              <SelectItem key={`current-${currentCategoryOption.id}`} value={currentCategoryOption.id.toString()}>
+                                {currentCategoryOption.name}
+                              </SelectItem>
+                            )}
                             {categories?.map(c => (
                               <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                             ))}

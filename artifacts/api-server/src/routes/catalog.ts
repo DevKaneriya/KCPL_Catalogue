@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, productsTable, categoriesTable, activityLogsTable, contentPagesTable } from "@workspace/db";
-import { eq, sql, desc, and, asc } from "drizzle-orm";
+import { eq, sql, desc, and, asc, inArray } from "drizzle-orm";
 import { logActivity } from "../lib/activity-logger";
 
 const router: IRouter = Router();
@@ -53,7 +53,7 @@ router.get("/catalog/stats", async (_req, res) => {
   const categories = await db.select().from(categoriesTable).orderBy(categoriesTable.id);
   
   const breakdown = await Promise.all(categories.map(async (cat) => {
-    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(productsTable).where(eq(productsTable.categoryId, cat.id));
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(productsTable).where(eq(productsTable.categoryId, cat.id));
     return { name: cat.name, count };
   }));
 
@@ -72,79 +72,70 @@ router.get("/catalog/stats", async (_req, res) => {
 });
 
 router.post("/catalog/preview-data", async (req, res) => {
-  const { sections, categoryIds } = req.body as { sections: string[]; categoryIds?: number[] };
+  try {
+    const { sections = [], categoryIds = [] } = req.body as { sections: string[]; categoryIds?: number[] };
+    console.log("DEBUG: Catalog preview request:", { sections, categoryIds });
 
-  const contentPages = sections.includes("content") || sections.some(s => s.startsWith("content-"))
-    ? await db.select().from(contentPagesTable).orderBy(asc(contentPagesTable.sortOrder))
-    : [];
+    const contentPages = sections.includes("content")
+      ? await db.select().from(contentPagesTable).orderBy(asc(contentPagesTable.sortOrder))
+      : [];
 
-  const cats = categoryIds?.length
-    ? await db.select().from(categoriesTable).where(sql`${categoriesTable.id} = ANY(${categoryIds})`)
-    : await db.select().from(categoriesTable).orderBy(categoriesTable.id);
+    // Only get categories if specifically requested via cat- ids OR if no filtering was intended
+    // But per user request "only selected", if categoryIds is empty and we had cat- selected, it should be empty
+    const cats = categoryIds.length > 0
+      ? await db.select().from(categoriesTable).where(inArray(categoriesTable.id, categoryIds))
+      : [];
 
-  const categoriesWithProducts = await Promise.all(
-    cats.map(async (cat) => {
-      const products = await db
-        .select({
-          id: productsTable.id,
-          categoryId: productsTable.categoryId,
-          categoryName: categoriesTable.name,
-          name: productsTable.name,
-          skuCode: productsTable.skuCode,
-          kcplCode: productsTable.kcplCode,
-          vehicleBrand: productsTable.vehicleBrand,
-          engineBrand: productsTable.engineBrand,
-          productType: productsTable.productType,
-          size: productsTable.size,
-          imageUrl: productsTable.imageUrl,
-          specifications: productsTable.specifications,
-          createdAt: productsTable.createdAt,
-          updatedAt: productsTable.updatedAt,
-        })
-        .from(productsTable)
-        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-        .where(eq(productsTable.categoryId, cat.id))
-        .orderBy(productsTable.vehicleBrand, productsTable.name);
-      return { id: cat.id, name: cat.name, slug: cat.slug, products };
-    })
-  );
+    const categoriesWithProducts = await Promise.all(
+      cats.map(async (cat) => {
+        const products = await db
+          .select({
+            id: productsTable.id,
+            categoryId: productsTable.categoryId,
+            categoryName: categoriesTable.name,
+            name: productsTable.name,
+            skuCode: productsTable.skuCode,
+            kcplCode: productsTable.kcplCode,
+            vehicleBrand: productsTable.vehicleBrand,
+            engineBrand: productsTable.engineBrand,
+            productType: productsTable.productType,
+            size: productsTable.size,
+            imageUrl: productsTable.imageUrl,
+            specifications: productsTable.specifications,
+            createdAt: productsTable.createdAt,
+            updatedAt: productsTable.updatedAt,
+          })
+          .from(productsTable)
+          .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+          .where(eq(productsTable.categoryId, cat.id))
+          .orderBy(productsTable.vehicleBrand, productsTable.name);
+        return { id: cat.id, name: cat.name, slug: cat.slug, products };
+      })
+    );
 
-  const allProducts = await db
-    .select({
-      id: productsTable.id,
-      categoryId: productsTable.categoryId,
-      categoryName: categoriesTable.name,
-      name: productsTable.name,
-      skuCode: productsTable.skuCode,
-      kcplCode: productsTable.kcplCode,
-      vehicleBrand: productsTable.vehicleBrand,
-      engineBrand: productsTable.engineBrand,
-      productType: productsTable.productType,
-      size: productsTable.size,
-      imageUrl: productsTable.imageUrl,
-      specifications: productsTable.specifications,
-      createdAt: productsTable.createdAt,
-      updatedAt: productsTable.updatedAt,
-    })
-    .from(productsTable)
-    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-    .orderBy(productsTable.vehicleBrand, productsTable.size, productsTable.name);
+    const index = sections.includes("index") ? await (async () => {
+      // Use products ONLY from the selected categories
+      const productsForIndex = categoriesWithProducts.flatMap(c => c.products);
+      const brandMap = new Map<string, Map<string, any[]>>();
+      for (const product of productsForIndex) {
+        const brand = product.vehicleBrand || "Unknown";
+        const size = product.size || "Unknown";
+        if (!brandMap.has(brand)) brandMap.set(brand, new Map());
+        const sizeMap = brandMap.get(brand)!;
+        if (!sizeMap.has(size)) sizeMap.set(size, []);
+        sizeMap.get(size)!.push(product);
+      }
+      return Array.from(brandMap.entries()).map(([brand, sizeMap]) => ({
+        brand,
+        sizes: Array.from(sizeMap.entries()).map(([size, prods]) => ({ size, products: prods })),
+      }));
+    })() : [];
 
-  const brandMap = new Map<string, Map<string, typeof allProducts>>();
-  for (const product of allProducts) {
-    const brand = product.vehicleBrand || "Unknown";
-    const size = product.size || "Unknown";
-    if (!brandMap.has(brand)) brandMap.set(brand, new Map());
-    const sizeMap = brandMap.get(brand)!;
-    if (!sizeMap.has(size)) sizeMap.set(size, []);
-    sizeMap.get(size)!.push(product);
+    res.json({ contentPages, categories: categoriesWithProducts, index, sections });
+  } catch (err: any) {
+    console.error("DEBUG: Catalog preview error:", err);
+    res.status(500).json({ error: err.message });
   }
-  const index = Array.from(brandMap.entries()).map(([brand, sizeMap]) => ({
-    brand,
-    sizes: Array.from(sizeMap.entries()).map(([size, prods]) => ({ size, products: prods })),
-  }));
-
-  res.json({ contentPages, categories: categoriesWithProducts, index, sections });
 });
 
 router.post("/catalog/export", async (req, res) => {

@@ -36,7 +36,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 export function AppSidebar() {
   const [location] = useLocation();
   const { data: categories, isLoading } = useListCategories();
-  const { user, logout } = useAuth();
+  const { user, logout, checkPermission } = useAuth();
 
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
@@ -44,7 +44,12 @@ export function AppSidebar() {
     return false;
   };
 
-  const isAdmin = user?.roleName === 'Admin' || user?.role?.name === 'Admin';
+  const showCategories = checkPermission("categories:write");
+  const showContent = checkPermission("content:write");
+  const showExport = checkPermission("export");
+  const showUsers = checkPermission("users:write");
+  const showRoles = checkPermission("roles:write");
+  const showCatalogIndex = checkPermission("catalog:read");
 
   return (
     <Sidebar variant="sidebar" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -123,14 +128,16 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               </Collapsible>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild data-active={isActive("/categories")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                  <Link href="/categories">
-                    <Tags className="w-4 h-4" />
-                    <span>Categories</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {showCategories && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild data-active={isActive("/categories")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                    <Link href="/categories">
+                      <Tags className="w-4 h-4" />
+                      <span>Categories</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -140,30 +147,36 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase tracking-wider text-xs font-display">Publishing</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild data-active={isActive("/catalog-index")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                  <Link href="/catalog-index">
-                    <Settings2 className="w-4 h-4" />
-                    <span>Catalog Index</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild data-active={isActive("/content")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                  <Link href="/content">
-                    <FileText className="w-4 h-4" />
-                    <span>Content Pages</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild data-active={isActive("/export")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                  <Link href="/export">
-                    <Download className="w-4 h-4" />
-                    <span>Export Engine</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {showCatalogIndex && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild data-active={isActive("/catalog-index")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                    <Link href="/catalog-index">
+                      <Settings2 className="w-4 h-4" />
+                      <span>Catalog Index</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {showContent && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild data-active={isActive("/content")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                    <Link href="/content">
+                      <FileText className="w-4 h-4" />
+                      <span>Content Pages</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {showExport && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild data-active={isActive("/export")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                    <Link href="/export">
+                      <Download className="w-4 h-4" />
+                      <span>Export Engine</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -182,25 +195,25 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
-              {isAdmin && (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild data-active={isActive("/users")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                      <Link href="/users">
-                        <Users className="w-4 h-4" />
-                        <span>Users</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild data-active={isActive("/roles")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                      <Link href="/roles">
-                        <Shield className="w-4 h-4" />
-                        <span>Roles</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
+              {showUsers && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild data-active={isActive("/users")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                    <Link href="/users">
+                      <Users className="w-4 h-4" />
+                      <span>Users</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {showRoles && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild data-active={isActive("/roles")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                    <Link href="/roles">
+                      <Shield className="w-4 h-4" />
+                      <span>Roles</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               )}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -217,7 +230,7 @@ export function AppSidebar() {
             </Avatar>
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-medium leading-none truncate">{user?.username || 'Admin'}</span>
-              <span className="text-xs text-sidebar-foreground/60 mt-1 truncate">{user?.role?.name || 'Administrator'}</span>
+              <span className="text-xs text-sidebar-foreground/60 mt-1 truncate">{user?.roleName || 'Administrator'}</span>
             </div>
           </div>
           <button 
