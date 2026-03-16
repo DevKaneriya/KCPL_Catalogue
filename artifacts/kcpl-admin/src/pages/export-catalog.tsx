@@ -75,6 +75,12 @@ export default function ExportCatalog() {
     const indexData = data.index || [];
     const showContent = sections.includes('content');
     const showIndex = sections.includes('index');
+    const contentCount = showContent ? contentPages.length : 0;
+    const indexCount = showIndex && indexData.length > 0 ? 1 : 0;
+    const categoryStartPage = 1 + contentCount + indexCount + 1;
+    const categoryPageMap = new Map<number, number>(
+      cats.map((cat: any, idx: number) => [cat.id, categoryStartPage + idx])
+    );
 
     const styles = `
       @page { size: A4; margin: 18mm 14mm; }
@@ -112,6 +118,7 @@ export default function ExportCatalog() {
       .index-table th { background: #0d9488; color: white; padding: 8px; text-align: left; }
       .index-table td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
       .index-table tr:nth-child(even) td { background: #f8fafc; }
+      .index-table th.page-col, .index-table td.page-col { width: 70px; text-align: center; }
 
       /* Category Pages */
       .cat-section { margin-top: 5mm; }
@@ -171,6 +178,7 @@ export default function ExportCatalog() {
                 <th>Model / Size</th>
                 <th>KCPL Code</th>
                 <th>SKU</th>
+                <th class="page-col">Page No</th>
               </tr>
             </thead>
             <tbody>
@@ -180,6 +188,7 @@ export default function ExportCatalog() {
                   <td>${size.size}</td>
                   <td>${p.kcplCode || p.name}</td>
                   <td><strong>${p.skuCode || '—'}</strong></td>
+                  <td class="page-col">${categoryPageMap.get(p.categoryId) ?? '—'}</td>
                 </tr>
               `))).join('')}
             </tbody>
@@ -235,7 +244,7 @@ export default function ExportCatalog() {
   if (showLivePreview && previewData) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col">
-        <div className="bg-white/90 backdrop-blur-xl border-b border-border px-8 py-10 flex items-center justify-between shadow-sm sticky top-0">
+        <div className="bg-white/90 backdrop-blur-xl border-b border-border px-50 py-10 flex items-center justify-evenly shadow-sm sticky h-20 top-0 ">
           <div className="flex items-center gap-5">
             <Button 
               variant="ghost" 
@@ -250,17 +259,17 @@ export default function ExportCatalog() {
               <p className="text-sm text-muted-foreground mt-1.5 font-medium">Review exactly how your catalog will look when printed</p>
             </div>
           </div>
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-5 items-center">
             <Button 
               variant="outline" 
               onClick={() => setShowLivePreview(false)} 
-              className="h-11 px-6 font-semibold border-slate-200 hover:bg-slate-100 transition-all rounded-xl active:scale-95"
+              className="h-11 px-12 py-12 font-semibold border-slate-200 hover:bg-slate-100 transition-all rounded-xl active:scale-95 w-40"
             >
               Edit Selection
             </Button>
             <Button 
               onClick={handlePrint} 
-              className="h-11 px-8 font-semibold shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all rounded-xl gap-2 bg-primary text-primary-foreground"
+              className="h-11 px-12 py-12 font-semibold shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all rounded-xl gap-2 bg-primary text-primary-foreground w-40"
             >
               <Printer className="w-4 h-4" /> 
               Print Full Catalog
@@ -415,3 +424,4 @@ export default function ExportCatalog() {
     </Layout>
   );
 }
+
