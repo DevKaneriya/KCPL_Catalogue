@@ -73,8 +73,8 @@ export default function CatalogIndex() {
                                       <div className="w-8 h-8 rounded bg-background border border-border border-dashed" />
                                     )}
                                     <div>
-                                      <p className="font-medium text-sm leading-none">{prod.name || 'Unnamed'}</p>
-                                      <p className="text-xs text-muted-foreground mt-1 font-mono">{prod.kcplCode} / {prod.skuCode}</p>
+                                      <p className="font-medium text-sm leading-none">{prod.modelName || 'Unnamed'}</p>
+                                      <p className="text-xs text-muted-foreground mt-1 font-mono">{prod.kcplCode}</p>
                                     </div>
                                   </div>
                                   <Badge variant="outline" className="text-xs capitalize">{prod.productType}</Badge>

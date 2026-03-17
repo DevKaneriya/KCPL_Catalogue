@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useListCategories, useGetCatalogPreviewData } from "@workspace/api-client-react";
+import { useListCategories, useGetCatalogPreviewData, useGetProductTypesMaster } from "@workspace/api-client-react";
 
 type CatalogPreviewData = {
   contentPages?: any[];
@@ -11,28 +11,69 @@ type CatalogPreviewData = {
   index?: any[];
   sections?: string[];
 };
-import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, FileText, Settings2, Printer, ArrowLeft } from "lucide-react";
+import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, FileText, Settings2, Printer, ArrowLeft, FileDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import { useEffect } from "react";
 
 export default function ExportCatalog() {
   const { data: categories } = useListCategories();
+  const { data: masterProductTypes } = useGetProductTypesMaster();
   const previewMutation = useGetCatalogPreviewData();
   const { toast } = useToast();
 
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const defaultCategory = searchParams.get('category');
+  const appCategory = searchParams.get('appCategory');
+  const brand = searchParams.get('brand');
+  const productType = searchParams.get('productType');
 
   const [step, setStep] = useState(1);
-  const [sections, setSections] = useState<string[]>(
-    defaultCategory && defaultCategory !== 'all'
-      ? [`cat-${defaultCategory}`]
-      : ['content']
-  );
+  const [sections, setSections] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (categories && masterProductTypes) {
+      if (!defaultCategory || defaultCategory === 'all') {
+        const typeIds = masterProductTypes.map(t => `type-${t.name}`);
+        setSections(['content', 'index', ...typeIds]);
+      } else {
+        // Coming from a specific category tab
+        const initialSections = ['content', 'index'];
+        
+        // Try to match by productType param first (Radiator, Condenser, etc.)
+        if (productType && productType !== 'all') {
+          const matchingType = masterProductTypes.find(t => 
+            t.name.toLowerCase() === productType.toLowerCase()
+          );
+          if (matchingType) {
+            initialSections.push(`type-${matchingType.name}`);
+          }
+        } else {
+          // Try to map from category slug (radiators -> Radiator)
+          const cat = categories.find(c => c.slug === defaultCategory || String(c.id) === defaultCategory);
+          if (cat) {
+            const matchingType = masterProductTypes.find(t => 
+              cat.name.includes(t.name) || t.name.includes(cat.name.replace(/s$/, ''))
+            );
+            if (matchingType) {
+              initialSections.push(`type-${matchingType.name}`);
+            } else {
+              initialSections.push(`cat-${cat.id}`);
+            }
+          }
+        }
+        setSections(initialSections);
+      }
+    }
+  }, [categories, masterProductTypes, defaultCategory, productType]);
+
   const [previewData, setPreviewData] = useState<CatalogPreviewData | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const toggleSection = (id: string) => {
     setSections(prev =>
@@ -41,25 +82,37 @@ export default function ExportCatalog() {
   };
 
   const selectAll = () => {
-    const allCatIds = categories?.map(c => `cat-${c.id}`) || [];
-    setSections(['content', 'index', ...allCatIds]);
+    const allTypeIds = masterProductTypes?.map(t => `type-${t.name}`) || [];
+    setSections(['content', 'index', ...allTypeIds]);
   };
 
   const deselectAll = () => setSections([]);
 
   const goToPreview = () => {
-    if (sections.length === 0) return toast({ title: "Select at least one section", variant: "destructive" });
+    if (sections.length === 0) {
+      toast({ title: "Select at least one section", variant: "destructive" });
+      return;
+    }
     const selectedCategoryIds = sections
       .filter(s => s.startsWith('cat-'))
       .map(s => parseInt(s.replace('cat-', '')));
+    
+    const selectedProductTypes = sections
+      .filter(s => s.startsWith('type-'))
+      .map(s => s.replace('type-', ''));
 
-    console.log("DEBUG: Requesting preview with sections", sections, "categoryIds", selectedCategoryIds);
+    console.log("DEBUG: Requesting preview", { sections, selectedCategoryIds, selectedProductTypes });
 
     previewMutation.mutate(
-      { data: { sections, categoryIds: selectedCategoryIds } },
+      { data: { 
+          sections, 
+          categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined, 
+          applicationCategory: appCategory || undefined, 
+          brandName: brand || undefined, 
+          productType: selectedProductTypes.length > 0 ? selectedProductTypes[0] : (productType || undefined) 
+      } },
       {
         onSuccess: (data) => {
-          console.log("DEBUG: Received preview data", data);
           setPreviewData(data);
           setStep(2);
           setIsDone(false);
@@ -133,6 +186,12 @@ export default function ExportCatalog() {
       .footer { position: absolute; bottom: 10mm; left: 14mm; right: 14mm; font-size: 8pt; color: #94a3b8; display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 3mm; }
     `;
 
+    const resolveUrl = (url?: string) => {
+      if (!url) return '';
+      if (url.startsWith('http') || url.startsWith('data:')) return url;
+      return window.location.origin + (url.startsWith('/') ? url : '/' + url);
+    };
+
     const html = `<!DOCTYPE html>
     <html>
     <head>
@@ -158,7 +217,7 @@ export default function ExportCatalog() {
         <div class="sheet page-break">
           <h2 class="section-title">${page.title}</h2>
           <div class="content-item">
-            ${page.imageUrl ? `<img src="${page.imageUrl}" class="content-img">` : ''}
+            ${page.imageUrl ? `<img src="${resolveUrl(page.imageUrl)}" class="content-img">` : ''}
             <div class="content-html">${page.content || ''}</div>
           </div>
           <div class="footer">
@@ -177,7 +236,7 @@ export default function ExportCatalog() {
                 <th>Brand</th>
                 <th>Model / Size</th>
                 <th>KCPL Code</th>
-                <th>SKU</th>
+                <th>Adaptable Part</th>
                 <th class="page-col">Page No</th>
               </tr>
             </thead>
@@ -186,8 +245,8 @@ export default function ExportCatalog() {
                 <tr>
                   <td>${brand.brand}</td>
                   <td>${size.size}</td>
-                  <td>${p.kcplCode || p.name}</td>
-                  <td><strong>${p.skuCode || '—'}</strong></td>
+                  <td>${p.kcplCode || '—'}</td>
+                  <td><strong>${p.adaptablePartNo || '—'}</strong></td>
                   <td class="page-col">${categoryPageMap.get(p.categoryId) ?? '—'}</td>
                 </tr>
               `))).join('')}
@@ -206,10 +265,10 @@ export default function ExportCatalog() {
           <div class="product-grid">
             ${cat.products.map((p: any) => `
               <div class="product-card">
-                ${p.imageUrl ? `<img src="${p.imageUrl}" class="product-img">` : `<div class="product-placeholder">No Image</div>`}
-                <div class="product-name">${p.name || 'Product'}</div>
-                <div class="product-sku">${p.skuCode || 'SKU-000'}</div>
-                <div class="product-info">${p.vehicleBrand || ''} ${p.size ? `• ${p.size}` : ''}</div>
+                ${p.imageUrl ? `<img src="${resolveUrl(p.imageUrl)}" class="product-img">` : `<div class="product-placeholder">No Image</div>`}
+                <div class="product-name">${p.modelName || 'Product'}</div>
+                <div class="product-sku">${p.kcplCode || 'CODE-000'}</div>
+                <div class="product-info">${p.brandName || ''} ${p.size ? `• ${p.size}` : ''}</div>
               </div>
             `).join('')}
           </div>
@@ -220,24 +279,75 @@ export default function ExportCatalog() {
         </div>
       `).join('')}
 
-      ${!forBrowser ? '<script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 500); }</script>' : ''}
+      ${!forBrowser ? '<script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 1000); }</script>' : ''}
     </body>
     </html>`;
 
     return html;
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!previewData) return;
+    
+    // 1. Trigger the browser print (opens in new tab with print dialog)
     const html = buildPrintHTML(previewData, false);
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const win = window.open(url, '_blank');
+    
     if (!win) {
       toast({ title: "Popup blocked", description: "Please allow popups to print.", variant: "destructive" });
     } else {
       setStep(3);
       setIsDone(true);
+    }
+
+    // 2. Direct PDF Download
+    try {
+      setIsGenerating(true);
+      toast({ 
+        title: "Generating PDF...", 
+        description: "Your catalog is being prepared for download.",
+      });
+
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      // Simple HTML to PDF conversion using the available container or building one
+      const tempContainer = document.createElement('div');
+      tempContainer.style.width = '210mm';
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.innerHTML = buildPrintHTML(previewData, true);
+      document.body.appendChild(tempContainer);
+
+      await doc.html(tempContainer, {
+        callback: function (doc) {
+          doc.save(`KCPL_Catalog_${new Date().toISOString().split('T')[0]}.pdf`);
+          document.body.removeChild(tempContainer);
+          setIsGenerating(false);
+          toast({ title: "Download complete!" });
+        },
+        x: 0,
+        y: 0,
+        width: 210,
+        windowWidth: 800,
+        html2canvas: {
+          scale: 0.25, // Lower scale for better performance and smaller size
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          letterRendering: true
+        }
+      });
+    } catch (err: any) {
+      console.error("PDF Generate Error:", err);
+      setIsGenerating(false);
+      // We don't block the user since the print window likely still opened
     }
   };
 
@@ -269,10 +379,11 @@ export default function ExportCatalog() {
             </Button>
             <Button 
               onClick={handlePrint} 
+              disabled={isGenerating}
               className="h-11 px-12 py-12 font-semibold shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all rounded-xl gap-2 bg-primary text-primary-foreground w-40"
             >
-              <Printer className="w-4 h-4" /> 
-              Print Full Catalog
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} 
+              {isGenerating ? "Preparing..." : "Print Full Catalog"}
             </Button>
           </div>
         </div>
@@ -338,13 +449,12 @@ export default function ExportCatalog() {
                     ))}
                   </div>
                   <div className="p-6 space-y-4">
-                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">Product Categories</h4>
+                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">Product Types</h4>
                     <div className="grid grid-cols-1 gap-3">
-                      {categories?.map(cat => (
-                        <label key={cat.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${sections.includes(`cat-${cat.id}`) ? 'bg-primary/5 border-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
-                          <Checkbox checked={sections.includes(`cat-${cat.id}`)} onCheckedChange={() => toggleSection(`cat-${cat.id}`)} />
-                          <span className="font-medium text-sm">{cat.name}</span>
-                          <Badge variant="outline" className="ml-auto bg-background text-[10px]">{cat.productCount} Items</Badge>
+                      {masterProductTypes?.map(type => (
+                        <label key={type.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${sections.includes(`type-${type.name}`) ? 'bg-primary/5 border-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
+                          <Checkbox checked={sections.includes(`type-${type.name}`)} onCheckedChange={() => toggleSection(`type-${type.name}`)} />
+                          <span className="font-medium text-sm">{type.name}</span>
                         </label>
                       ))}
                     </div>

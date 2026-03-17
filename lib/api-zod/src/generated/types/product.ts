@@ -11,13 +11,13 @@ export interface Product {
   id: number;
   categoryId: number;
   categoryName?: string;
-  name?: string;
-  skuCode?: string;
-  kcplCode?: string;
-  vehicleBrand?: string;
-  engineBrand?: string;
+  applicationCategory?: string;
   productType?: string;
+  brandName?: string;
+  kcplCode?: string;
+  modelName?: string;
   size?: string;
+  adaptablePartNo?: string;
   imageUrl?: string;
   specifications?: ProductSpecifications;
   createdAt: Date;

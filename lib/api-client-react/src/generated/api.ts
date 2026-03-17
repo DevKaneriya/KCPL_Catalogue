@@ -18,19 +18,28 @@ import type {
 
 import type {
   ActivityLogResponse,
+  AppCat,
+  Brand,
   CatalogPreviewData,
   CatalogStats,
   ContentPage,
+  CreateAppCatBody,
+  CreateBrandBody,
   CreateCategoryRequest,
   CreateContentPageRequest,
   CreateProductRequest,
+  CreateProductTypeBody,
   CreateRoleRequest,
   CreateUserRequest,
   ErrorResponse,
   ExportCatalogRequest,
   ExportResult,
+  GetAppCatsParams,
+  GetBrandsParams,
   GetCatalogIndexParams,
   GetCatalogPreviewDataBody,
+  GetProductFilters200,
+  GetProductFiltersParams,
   HealthStatus,
   IndexNode,
   ListActivityLogsParams,
@@ -40,6 +49,7 @@ import type {
   Product,
   ProductCategory,
   ProductListResponse,
+  ProductType,
   ReorderContentPagesBody,
   Role,
   UpdateUserRequest,
@@ -1602,6 +1612,103 @@ export const useCreateProduct = <
 };
 
 /**
+ * @summary Get distinct filter values for products
+ */
+export const getGetProductFiltersUrl = (params?: GetProductFiltersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/products/filters?${stringifiedParams}`
+    : `/api/products/filters`;
+};
+
+export const getProductFilters = async (
+  params?: GetProductFiltersParams,
+  options?: RequestInit,
+): Promise<GetProductFilters200> => {
+  return customFetch<GetProductFilters200>(getGetProductFiltersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProductFiltersQueryKey = (
+  params?: GetProductFiltersParams,
+) => {
+  return [`/api/products/filters`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetProductFiltersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProductFilters>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetProductFiltersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProductFilters>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetProductFiltersQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProductFilters>>
+  > = ({ signal }) => getProductFilters(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProductFilters>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProductFiltersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProductFilters>>
+>;
+export type GetProductFiltersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get distinct filter values for products
+ */
+
+export function useGetProductFilters<
+  TData = Awaited<ReturnType<typeof getProductFilters>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetProductFiltersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProductFilters>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProductFiltersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get a product by ID
  */
 export const getGetProductUrl = (id: number) => {
@@ -2802,3 +2909,488 @@ export function useListActivityLogs<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export const getGetBrandsUrl = (params?: GetBrandsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/masters/brands?${stringifiedParams}`
+    : `/api/masters/brands`;
+};
+
+export const getBrands = async (
+  params?: GetBrandsParams,
+  options?: RequestInit,
+): Promise<Brand[]> => {
+  return customFetch<Brand[]>(getGetBrandsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBrandsQueryKey = (params?: GetBrandsParams) => {
+  return [`/api/masters/brands`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetBrandsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetBrandsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBrands>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBrandsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBrands>>> = ({
+    signal,
+  }) => getBrands(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBrands>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBrandsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBrands>>
+>;
+export type GetBrandsQueryError = ErrorType<unknown>;
+
+export function useGetBrands<
+  TData = Awaited<ReturnType<typeof getBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetBrandsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBrands>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBrandsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getCreateBrandUrl = () => {
+  return `/api/masters/brands`;
+};
+
+export const createBrand = async (
+  createBrandBody: CreateBrandBody,
+  options?: RequestInit,
+): Promise<Brand> => {
+  return customFetch<Brand>(getCreateBrandUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createBrandBody),
+  });
+};
+
+export const getCreateBrandMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBrand>>,
+    TError,
+    { data: BodyType<CreateBrandBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBrand>>,
+  TError,
+  { data: BodyType<CreateBrandBody> },
+  TContext
+> => {
+  const mutationKey = ["createBrand"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBrand>>,
+    { data: BodyType<CreateBrandBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBrand(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBrandMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBrand>>
+>;
+export type CreateBrandMutationBody = BodyType<CreateBrandBody>;
+export type CreateBrandMutationError = ErrorType<unknown>;
+
+export const useCreateBrand = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBrand>>,
+    TError,
+    { data: BodyType<CreateBrandBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBrand>>,
+  TError,
+  { data: BodyType<CreateBrandBody> },
+  TContext
+> => {
+  return useMutation(getCreateBrandMutationOptions(options));
+};
+
+export const getGetAppCatsUrl = (params?: GetAppCatsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/masters/application-categories?${stringifiedParams}`
+    : `/api/masters/application-categories`;
+};
+
+export const getAppCats = async (
+  params?: GetAppCatsParams,
+  options?: RequestInit,
+): Promise<AppCat[]> => {
+  return customFetch<AppCat[]>(getGetAppCatsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAppCatsQueryKey = (params?: GetAppCatsParams) => {
+  return [
+    `/api/masters/application-categories`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetAppCatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAppCats>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetAppCatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAppCats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAppCatsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAppCats>>> = ({
+    signal,
+  }) => getAppCats(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAppCats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAppCatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAppCats>>
+>;
+export type GetAppCatsQueryError = ErrorType<unknown>;
+
+export function useGetAppCats<
+  TData = Awaited<ReturnType<typeof getAppCats>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetAppCatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAppCats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAppCatsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getCreateAppCatUrl = () => {
+  return `/api/masters/application-categories`;
+};
+
+export const createAppCat = async (
+  createAppCatBody: CreateAppCatBody,
+  options?: RequestInit,
+): Promise<AppCat> => {
+  return customFetch<AppCat>(getCreateAppCatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createAppCatBody),
+  });
+};
+
+export const getCreateAppCatMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAppCat>>,
+    TError,
+    { data: BodyType<CreateAppCatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAppCat>>,
+  TError,
+  { data: BodyType<CreateAppCatBody> },
+  TContext
+> => {
+  const mutationKey = ["createAppCat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAppCat>>,
+    { data: BodyType<CreateAppCatBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAppCat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAppCatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAppCat>>
+>;
+export type CreateAppCatMutationBody = BodyType<CreateAppCatBody>;
+export type CreateAppCatMutationError = ErrorType<unknown>;
+
+export const useCreateAppCat = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAppCat>>,
+    TError,
+    { data: BodyType<CreateAppCatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAppCat>>,
+  TError,
+  { data: BodyType<CreateAppCatBody> },
+  TContext
+> => {
+  return useMutation(getCreateAppCatMutationOptions(options));
+};
+
+export const getGetProductTypesMasterUrl = () => {
+  return `/api/masters/product-types`;
+};
+
+export const getProductTypesMaster = async (
+  options?: RequestInit,
+): Promise<ProductType[]> => {
+  return customFetch<ProductType[]>(getGetProductTypesMasterUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProductTypesMasterQueryKey = () => {
+  return [`/api/masters/product-types`] as const;
+};
+
+export const getGetProductTypesMasterQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProductTypesMaster>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProductTypesMaster>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProductTypesMasterQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProductTypesMaster>>
+  > = ({ signal }) => getProductTypesMaster({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProductTypesMaster>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProductTypesMasterQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProductTypesMaster>>
+>;
+export type GetProductTypesMasterQueryError = ErrorType<unknown>;
+
+export function useGetProductTypesMaster<
+  TData = Awaited<ReturnType<typeof getProductTypesMaster>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProductTypesMaster>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProductTypesMasterQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getCreateProductTypeUrl = () => {
+  return `/api/masters/product-types`;
+};
+
+export const createProductType = async (
+  createProductTypeBody: CreateProductTypeBody,
+  options?: RequestInit,
+): Promise<ProductType> => {
+  return customFetch<ProductType>(getCreateProductTypeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createProductTypeBody),
+  });
+};
+
+export const getCreateProductTypeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProductType>>,
+    TError,
+    { data: BodyType<CreateProductTypeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProductType>>,
+  TError,
+  { data: BodyType<CreateProductTypeBody> },
+  TContext
+> => {
+  const mutationKey = ["createProductType"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProductType>>,
+    { data: BodyType<CreateProductTypeBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createProductType(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProductTypeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProductType>>
+>;
+export type CreateProductTypeMutationBody = BodyType<CreateProductTypeBody>;
+export type CreateProductTypeMutationError = ErrorType<unknown>;
+
+export const useCreateProductType = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProductType>>,
+    TError,
+    { data: BodyType<CreateProductTypeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProductType>>,
+  TError,
+  { data: BodyType<CreateProductTypeBody> },
+  TContext
+> => {
+  return useMutation(getCreateProductTypeMutationOptions(options));
+};

@@ -5,8 +5,30 @@
  * KCPL Catalog Automation System API
  * OpenAPI spec version: 0.2.0
  */
+export interface Brand {
+  id: number;
+  name: string;
+  productTypeId: number;
+  applicationCategoryId: number;
+  createdAt?: string;
+}
+
+export interface AppCat {
+  id: number;
+  name: string;
+  productTypeId: number;
+  createdAt?: string;
+}
+
+export interface ProductType {
+  id: number;
+  name: string;
+  createdAt?: string;
+}
+
 export interface HealthStatus {
   status: string;
+  message?: string;
 }
 
 export interface ErrorResponse {
@@ -92,13 +114,13 @@ export interface Product {
   id: number;
   categoryId: number;
   categoryName?: string;
-  name?: string;
-  skuCode?: string;
-  kcplCode?: string;
-  vehicleBrand?: string;
-  engineBrand?: string;
+  applicationCategory?: string;
   productType?: string;
+  brandName?: string;
+  kcplCode?: string;
+  modelName?: string;
   size?: string;
+  adaptablePartNo?: string;
   imageUrl?: string;
   specifications?: ProductSpecifications;
   createdAt: string;
@@ -109,13 +131,14 @@ export type CreateProductRequestSpecifications = { [key: string]: unknown };
 
 export interface CreateProductRequest {
   categoryId?: number;
-  name?: string;
-  skuCode?: string;
-  kcplCode?: string;
-  vehicleBrand?: string;
-  engineBrand?: string;
+  categoryName?: string;
+  applicationCategory?: string;
   productType?: string;
+  brandName?: string;
+  kcplCode?: string;
+  modelName?: string;
   size?: string;
+  adaptablePartNo?: string;
   imageUrl?: string;
   specifications?: CreateProductRequestSpecifications;
 }
@@ -227,7 +250,21 @@ export type ListProductsParams = {
   limit?: number;
   search?: string;
   categoryId?: number;
-  vehicleBrand?: string;
+  applicationCategory?: string;
+  productType?: string;
+  brandName?: string;
+};
+
+export type GetProductFiltersParams = {
+  categoryId?: number;
+  applicationCategory?: string;
+  productType?: string;
+};
+
+export type GetProductFilters200 = {
+  applicationCategories?: string[];
+  productTypes?: string[];
+  brands?: string[];
 };
 
 export type GetCatalogIndexParams = {
@@ -241,9 +278,45 @@ export type ReorderContentPagesBody = {
 export type GetCatalogPreviewDataBody = {
   sections: string[];
   categoryIds?: number[];
+  applicationCategory?: string;
+  brandName?: string;
+  productType?: string;
 };
 
 export type ListActivityLogsParams = {
   page?: number;
   limit?: number;
+};
+
+export type GetBrandsParams = {
+  /**
+   * Filter by product type ID
+   */
+  productTypeId?: number;
+  /**
+   * Filter by application category ID
+   */
+  applicationCategoryId?: number;
+};
+
+export type CreateBrandBody = {
+  name: string;
+  productTypeId: number;
+  applicationCategoryId: number;
+};
+
+export type GetAppCatsParams = {
+  /**
+   * Filter by product type ID
+   */
+  productTypeId?: number;
+};
+
+export type CreateAppCatBody = {
+  name: string;
+  productTypeId: number;
+};
+
+export type CreateProductTypeBody = {
+  name: string;
 };

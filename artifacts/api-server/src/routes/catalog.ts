@@ -13,27 +13,26 @@ router.get("/catalog-index", async (req, res) => {
     .select({
       id: productsTable.id,
       categoryId: productsTable.categoryId,
-      categoryName: categoriesTable.name,
-      name: productsTable.name,
-      skuCode: productsTable.skuCode,
-      kcplCode: productsTable.kcplCode,
-      vehicleBrand: productsTable.vehicleBrand,
-      engineBrand: productsTable.engineBrand,
+      categoryName: productsTable.categoryName,
+      applicationCategory: productsTable.applicationCategory,
       productType: productsTable.productType,
+      brandName: productsTable.brandName,
+      kcplCode: productsTable.kcplCode,
+      modelName: productsTable.modelName,
       size: productsTable.size,
+      adaptablePartNo: productsTable.adaptablePartNo,
       imageUrl: productsTable.imageUrl,
       specifications: productsTable.specifications,
       createdAt: productsTable.createdAt,
       updatedAt: productsTable.updatedAt,
     })
     .from(productsTable)
-    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(where)
-    .orderBy(productsTable.vehicleBrand, productsTable.size, productsTable.name);
+    .orderBy(productsTable.brandName, productsTable.size, productsTable.modelName);
 
   const brandMap = new Map<string, Map<string, typeof products>>();
   for (const product of products) {
-    const brand = product.vehicleBrand || "Unknown";
+    const brand = product.brandName || "Unknown";
     const size = product.size || "Unknown";
     if (!brandMap.has(brand)) brandMap.set(brand, new Map());
     const sizeMap = brandMap.get(brand)!;
@@ -71,67 +70,75 @@ router.get("/catalog/stats", async (_req, res) => {
   res.json({ totalRadiators, totalCondensers, totalProducts, lastUpdated, recentActivity, categoryBreakdown: breakdown });
 });
 
-router.post("/catalog/preview-data", async (req, res) => {
-  try {
-    const { sections = [], categoryIds = [] } = req.body as { sections: string[]; categoryIds?: number[] };
-    console.log("DEBUG: Catalog preview request:", { sections, categoryIds });
+  router.post("/catalog/preview-data", async (req, res) => {
+    try {
+      const { sections = [], categoryIds = [], applicationCategory, brandName, productType } = req.body as { 
+        sections: string[]; categoryIds?: number[]; 
+        applicationCategory?: string; brandName?: string; productType?: string; 
+      };
+      
+      // Extract product types from sections if not explicitly provided
+      const extractedProductTypes = sections
+        .filter(s => s.startsWith('type-'))
+        .map(s => s.replace('type-', ''));
+      
+      console.log("DEBUG: Catalog preview request:", { sections, categoryIds, extractedProductTypes, applicationCategory, brandName });
 
-    const contentPages = sections.includes("content")
+      const contentPages = sections.includes("content")
       ? await db.select().from(contentPagesTable).orderBy(asc(contentPagesTable.sortOrder))
       : [];
 
-    // Only get categories if specifically requested via cat- ids OR if no filtering was intended
-    // But per user request "only selected", if categoryIds is empty and we had cat- selected, it should be empty
-    const cats = categoryIds.length > 0
-      ? await db.select().from(categoriesTable).where(inArray(categoriesTable.id, categoryIds))
-      : [];
+      // Logic: If we have specific product types selected, we generate pages BY TYPE.
+      // If no product types are selected but categories are, we generate pages BY CATEGORY.
+      
+      let catalogSections: any[] = [];
 
-    const categoriesWithProducts = await Promise.all(
-      cats.map(async (cat) => {
-        const products = await db
-          .select({
-            id: productsTable.id,
-            categoryId: productsTable.categoryId,
-            categoryName: categoriesTable.name,
-            name: productsTable.name,
-            skuCode: productsTable.skuCode,
-            kcplCode: productsTable.kcplCode,
-            vehicleBrand: productsTable.vehicleBrand,
-            engineBrand: productsTable.engineBrand,
-            productType: productsTable.productType,
-            size: productsTable.size,
-            imageUrl: productsTable.imageUrl,
-            specifications: productsTable.specifications,
-            createdAt: productsTable.createdAt,
-            updatedAt: productsTable.updatedAt,
+      if (extractedProductTypes.length > 0) {
+        // Mode A: Product Type Wise Export (Modern Master Data approach)
+        catalogSections = await Promise.all(
+          extractedProductTypes.map(async (typeName) => {
+            const conditions = [eq(productsTable.productType, typeName)];
+            if (applicationCategory) conditions.push(eq(productsTable.applicationCategory, applicationCategory));
+            if (brandName) conditions.push(eq(productsTable.brandName, brandName));
+            
+            const products = await db.select().from(productsTable).where(and(...conditions)).orderBy(productsTable.brandName, productsTable.modelName);
+            return { id: typeName, name: typeName, products };
           })
-          .from(productsTable)
-          .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-          .where(eq(productsTable.categoryId, cat.id))
-          .orderBy(productsTable.vehicleBrand, productsTable.name);
-        return { id: cat.id, name: cat.name, slug: cat.slug, products };
-      })
-    );
-
-    const index = sections.includes("index") ? await (async () => {
-      // Use products ONLY from the selected categories
-      const productsForIndex = categoriesWithProducts.flatMap(c => c.products);
-      const brandMap = new Map<string, Map<string, any[]>>();
-      for (const product of productsForIndex) {
-        const brand = product.vehicleBrand || "Unknown";
-        const size = product.size || "Unknown";
-        if (!brandMap.has(brand)) brandMap.set(brand, new Map());
-        const sizeMap = brandMap.get(brand)!;
-        if (!sizeMap.has(size)) sizeMap.set(size, []);
-        sizeMap.get(size)!.push(product);
+        );
+      } else if (categoryIds.length > 0) {
+        // Mode B: Legacy Category Wise Export
+        const cats = await db.select().from(categoriesTable).where(inArray(categoriesTable.id, categoryIds));
+        catalogSections = await Promise.all(
+          cats.map(async (cat) => {
+            const conditions = [eq(productsTable.categoryId, cat.id)];
+            if (productType) conditions.push(eq(productsTable.productType, productType));
+            if (applicationCategory) conditions.push(eq(productsTable.applicationCategory, applicationCategory));
+            if (brandName) conditions.push(eq(productsTable.brandName, brandName));
+            
+            const products = await db.select().from(productsTable).where(and(...conditions)).orderBy(productsTable.brandName, productsTable.modelName);
+            return { id: cat.id, name: cat.name, slug: cat.slug, products };
+          })
+        );
       }
-      return Array.from(brandMap.entries()).map(([brand, sizeMap]) => ({
-        brand,
-        sizes: Array.from(sizeMap.entries()).map(([size, prods]) => ({ size, products: prods })),
-      }));
-    })() : [];
 
-    res.json({ contentPages, categories: categoriesWithProducts, index, sections });
+      const index = sections.includes("index") ? await (async () => {
+        const productsForIndex = catalogSections.flatMap(c => c.products);
+        const brandMap = new Map<string, Map<string, any[]>>();
+        for (const product of productsForIndex) {
+          const brand = product.brandName || "Unknown";
+          const size = product.size || "Unknown";
+          if (!brandMap.has(brand)) brandMap.set(brand, new Map());
+          const sizeMap = brandMap.get(brand)!;
+          if (!sizeMap.has(size)) sizeMap.set(size, []);
+          sizeMap.get(size)!.push(product);
+        }
+        return Array.from(brandMap.entries()).map(([brand, sizeMap]) => ({
+          brand,
+          sizes: Array.from(sizeMap.entries()).map(([size, prods]) => ({ size, products: prods })),
+        }));
+      })() : [];
+
+      res.json({ contentPages, categories: catalogSections, index, sections });
   } catch (err: any) {
     console.error("DEBUG: Catalog preview error:", err);
     res.status(500).json({ error: err.message });

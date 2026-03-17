@@ -11,5 +11,7 @@ export type ListProductsParams = {
   limit?: number;
   search?: string;
   categoryId?: number;
-  vehicleBrand?: string;
+  applicationCategory?: string;
+  productType?: string;
+  brandName?: string;
 };

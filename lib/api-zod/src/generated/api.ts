@@ -12,6 +12,7 @@ import * as zod from "zod";
  */
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
+  message: zod.string().optional(),
 });
 
 /**
@@ -245,7 +246,9 @@ export const ListProductsQueryParams = zod.object({
   limit: zod.coerce.number().default(listProductsQueryLimitDefault),
   search: zod.coerce.string().optional(),
   categoryId: zod.coerce.number().optional(),
-  vehicleBrand: zod.coerce.string().optional(),
+  applicationCategory: zod.coerce.string().optional(),
+  productType: zod.coerce.string().optional(),
+  brandName: zod.coerce.string().optional(),
 });
 
 export const ListProductsResponse = zod.object({
@@ -254,13 +257,13 @@ export const ListProductsResponse = zod.object({
       id: zod.number(),
       categoryId: zod.number(),
       categoryName: zod.string().optional(),
-      name: zod.string().optional(),
-      skuCode: zod.string().optional(),
-      kcplCode: zod.string().optional(),
-      vehicleBrand: zod.string().optional(),
-      engineBrand: zod.string().optional(),
+      applicationCategory: zod.string().optional(),
       productType: zod.string().optional(),
+      brandName: zod.string().optional(),
+      kcplCode: zod.string().optional(),
+      modelName: zod.string().optional(),
       size: zod.string().optional(),
+      adaptablePartNo: zod.string().optional(),
       imageUrl: zod.string().optional(),
       specifications: zod.record(zod.string(), zod.unknown()).optional(),
       createdAt: zod.date(),
@@ -278,15 +281,31 @@ export const ListProductsResponse = zod.object({
  */
 export const CreateProductBody = zod.object({
   categoryId: zod.number().optional(),
-  name: zod.string().optional(),
-  skuCode: zod.string().optional(),
-  kcplCode: zod.string().optional(),
-  vehicleBrand: zod.string().optional(),
-  engineBrand: zod.string().optional(),
+  categoryName: zod.string().optional(),
+  applicationCategory: zod.string().optional(),
   productType: zod.string().optional(),
+  brandName: zod.string().optional(),
+  kcplCode: zod.string().optional(),
+  modelName: zod.string().optional(),
   size: zod.string().optional(),
+  adaptablePartNo: zod.string().optional(),
   imageUrl: zod.string().optional(),
   specifications: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+/**
+ * @summary Get distinct filter values for products
+ */
+export const GetProductFiltersQueryParams = zod.object({
+  categoryId: zod.coerce.number().optional(),
+  applicationCategory: zod.coerce.string().optional(),
+  productType: zod.coerce.string().optional(),
+});
+
+export const GetProductFiltersResponse = zod.object({
+  applicationCategories: zod.array(zod.string()).optional(),
+  productTypes: zod.array(zod.string()).optional(),
+  brands: zod.array(zod.string()).optional(),
 });
 
 /**
@@ -300,13 +319,13 @@ export const GetProductResponse = zod.object({
   id: zod.number(),
   categoryId: zod.number(),
   categoryName: zod.string().optional(),
-  name: zod.string().optional(),
-  skuCode: zod.string().optional(),
-  kcplCode: zod.string().optional(),
-  vehicleBrand: zod.string().optional(),
-  engineBrand: zod.string().optional(),
+  applicationCategory: zod.string().optional(),
   productType: zod.string().optional(),
+  brandName: zod.string().optional(),
+  kcplCode: zod.string().optional(),
+  modelName: zod.string().optional(),
   size: zod.string().optional(),
+  adaptablePartNo: zod.string().optional(),
   imageUrl: zod.string().optional(),
   specifications: zod.record(zod.string(), zod.unknown()).optional(),
   createdAt: zod.date(),
@@ -322,13 +341,14 @@ export const UpdateProductParams = zod.object({
 
 export const UpdateProductBody = zod.object({
   categoryId: zod.number().optional(),
-  name: zod.string().optional(),
-  skuCode: zod.string().optional(),
-  kcplCode: zod.string().optional(),
-  vehicleBrand: zod.string().optional(),
-  engineBrand: zod.string().optional(),
+  categoryName: zod.string().optional(),
+  applicationCategory: zod.string().optional(),
   productType: zod.string().optional(),
+  brandName: zod.string().optional(),
+  kcplCode: zod.string().optional(),
+  modelName: zod.string().optional(),
   size: zod.string().optional(),
+  adaptablePartNo: zod.string().optional(),
   imageUrl: zod.string().optional(),
   specifications: zod.record(zod.string(), zod.unknown()).optional(),
 });
@@ -337,13 +357,13 @@ export const UpdateProductResponse = zod.object({
   id: zod.number(),
   categoryId: zod.number(),
   categoryName: zod.string().optional(),
-  name: zod.string().optional(),
-  skuCode: zod.string().optional(),
-  kcplCode: zod.string().optional(),
-  vehicleBrand: zod.string().optional(),
-  engineBrand: zod.string().optional(),
+  applicationCategory: zod.string().optional(),
   productType: zod.string().optional(),
+  brandName: zod.string().optional(),
+  kcplCode: zod.string().optional(),
+  modelName: zod.string().optional(),
   size: zod.string().optional(),
+  adaptablePartNo: zod.string().optional(),
   imageUrl: zod.string().optional(),
   specifications: zod.record(zod.string(), zod.unknown()).optional(),
   createdAt: zod.date(),
@@ -374,13 +394,13 @@ export const GetCatalogIndexResponseItem = zod.object({
           id: zod.number(),
           categoryId: zod.number(),
           categoryName: zod.string().optional(),
-          name: zod.string().optional(),
-          skuCode: zod.string().optional(),
-          kcplCode: zod.string().optional(),
-          vehicleBrand: zod.string().optional(),
-          engineBrand: zod.string().optional(),
+          applicationCategory: zod.string().optional(),
           productType: zod.string().optional(),
+          brandName: zod.string().optional(),
+          kcplCode: zod.string().optional(),
+          modelName: zod.string().optional(),
           size: zod.string().optional(),
+          adaptablePartNo: zod.string().optional(),
           imageUrl: zod.string().optional(),
           specifications: zod.record(zod.string(), zod.unknown()).optional(),
           createdAt: zod.date(),
@@ -520,6 +540,9 @@ export const GetCatalogStatsResponse = zod.object({
 export const GetCatalogPreviewDataBody = zod.object({
   sections: zod.array(zod.string()),
   categoryIds: zod.array(zod.number()).optional(),
+  applicationCategory: zod.string().optional(),
+  brandName: zod.string().optional(),
+  productType: zod.string().optional(),
 });
 
 export const GetCatalogPreviewDataResponse = zod.object({
@@ -544,13 +567,13 @@ export const GetCatalogPreviewDataResponse = zod.object({
           id: zod.number(),
           categoryId: zod.number(),
           categoryName: zod.string().optional(),
-          name: zod.string().optional(),
-          skuCode: zod.string().optional(),
-          kcplCode: zod.string().optional(),
-          vehicleBrand: zod.string().optional(),
-          engineBrand: zod.string().optional(),
+          applicationCategory: zod.string().optional(),
           productType: zod.string().optional(),
+          brandName: zod.string().optional(),
+          kcplCode: zod.string().optional(),
+          modelName: zod.string().optional(),
           size: zod.string().optional(),
+          adaptablePartNo: zod.string().optional(),
           imageUrl: zod.string().optional(),
           specifications: zod.record(zod.string(), zod.unknown()).optional(),
           createdAt: zod.date(),
@@ -570,13 +593,13 @@ export const GetCatalogPreviewDataResponse = zod.object({
               id: zod.number(),
               categoryId: zod.number(),
               categoryName: zod.string().optional(),
-              name: zod.string().optional(),
-              skuCode: zod.string().optional(),
-              kcplCode: zod.string().optional(),
-              vehicleBrand: zod.string().optional(),
-              engineBrand: zod.string().optional(),
+              applicationCategory: zod.string().optional(),
               productType: zod.string().optional(),
+              brandName: zod.string().optional(),
+              kcplCode: zod.string().optional(),
+              modelName: zod.string().optional(),
               size: zod.string().optional(),
+              adaptablePartNo: zod.string().optional(),
               imageUrl: zod.string().optional(),
               specifications: zod
                 .record(zod.string(), zod.unknown())
@@ -618,4 +641,63 @@ export const ListActivityLogsResponse = zod.object({
   total: zod.number(),
   page: zod.number(),
   limit: zod.number(),
+});
+
+export const GetBrandsQueryParams = zod.object({
+  productTypeId: zod.coerce
+    .number()
+    .optional()
+    .describe("Filter by product type ID"),
+  applicationCategoryId: zod.coerce
+    .number()
+    .optional()
+    .describe("Filter by application category ID"),
+});
+
+export const GetBrandsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  productTypeId: zod.number(),
+  applicationCategoryId: zod.number(),
+  createdAt: zod.date().optional(),
+});
+export const GetBrandsResponse = zod.array(GetBrandsResponseItem);
+
+export const CreateBrandBody = zod.object({
+  name: zod.string(),
+  productTypeId: zod.number(),
+  applicationCategoryId: zod.number(),
+});
+
+export const GetAppCatsQueryParams = zod.object({
+  productTypeId: zod.coerce
+    .number()
+    .optional()
+    .describe("Filter by product type ID"),
+});
+
+export const GetAppCatsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  productTypeId: zod.number(),
+  createdAt: zod.date().optional(),
+});
+export const GetAppCatsResponse = zod.array(GetAppCatsResponseItem);
+
+export const CreateAppCatBody = zod.object({
+  name: zod.string(),
+  productTypeId: zod.number(),
+});
+
+export const GetProductTypesMasterResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  createdAt: zod.date().optional(),
+});
+export const GetProductTypesMasterResponse = zod.array(
+  GetProductTypesMasterResponseItem,
+);
+
+export const CreateProductTypeBody = zod.object({
+  name: zod.string(),
 });

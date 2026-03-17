@@ -1,0 +1,29 @@
+﻿node.exe : TypeError: Cannot 
+read properties of undefined 
+(reading 'checkConstraint')
+At C:\Users\HP\AppData\Roamin
+g\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir
+/node_modules/pnpm/bin/pnpm.c
+js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (TypeErr  
+  or: Cann...eckConstraint   
+ '):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+    at fromDatabase (D:\icaru
+s-office\KCPL\catalog-lates-f
+ile\catalog-Automation-latest
+\Catalog-Automation\node_modu
+les\.pnpm\drizzle-kit@0.31.9\
+node_modules\drizzle-kit\bin.
+cjs:18407:23)
+    at process.processTicksAn
+dRejections (node:internal/pr
+ocess/task_queues:103:5)

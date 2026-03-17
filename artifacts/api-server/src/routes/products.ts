@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, productsTable, categoriesTable } from "@workspace/db";
+import { db, productsTable, categoriesTable, brandsTable, applicationCategoriesTable, productTypesTable } from "@workspace/db";
 import { eq, like, and, sql, or, desc } from "drizzle-orm";
 import { logActivity } from "../lib/activity-logger";
 import { authenticate, requirePermission } from "../middleware/auth";
@@ -10,25 +10,144 @@ const router: IRouter = Router();
 // accidental huge payloads. Increase to ~5MB for typical base64 images.
 const MAX_IMAGE_URL_LENGTH = 5_000_000;
 
+router.get("/products/filters", authenticate, async (req, res) => {
+  try {
+    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
+    const applicationCategory = req.query.applicationCategory as string | undefined;
+    const productType = req.query.productType as string | undefined;
+
+    const conditions = [];
+    if (categoryId) {
+      conditions.push(eq(productsTable.categoryId, categoryId));
+    }
+    if (productType && productType !== "all") {
+      const searchVal = productType.endsWith('s') ? productType.slice(0, -1) : productType;
+      conditions.push(or(
+        eq(productsTable.productType, productType),
+        like(productsTable.productType, `%${searchVal}%`),
+        like(productsTable.categoryName, `%${searchVal}%`)
+      ));
+    } else if (!categoryId) {
+      conditions.push(or(
+        sql`${productsTable.productType} IS NOT NULL AND ${productsTable.productType} != ''`,
+        sql`${productsTable.categoryName} IS NOT NULL AND ${productsTable.categoryName} != ''`
+      ));
+    }
+
+    if (applicationCategory) conditions.push(eq(productsTable.applicationCategory, applicationCategory));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [appCatsProduct, typesProduct, brandsProduct] = await Promise.all([
+      db.selectDistinct({ value: productsTable.applicationCategory })
+        .from(productsTable)
+        .where(and(where, sql`${productsTable.applicationCategory} IS NOT NULL`)),
+      db.selectDistinct({ value: productsTable.productType })
+        .from(productsTable)
+        .where(and(where, sql`${productsTable.productType} IS NOT NULL`)),
+      db.selectDistinct({ value: productsTable.brandName })
+        .from(productsTable)
+        .where(and(where, sql`${productsTable.brandName} IS NOT NULL`))
+    ]);
+
+    // Also fetch from master tables with hierarchy awareness
+    let typeIdMatch: number | undefined;
+    let catIdMatch: number | undefined;
+
+    if (productType) {
+      const [type] = await db.select({ id: productTypesTable.id }).from(productTypesTable).where(eq(productTypesTable.name, productType));
+      if (type) typeIdMatch = type.id;
+    }
+
+    if (applicationCategory && typeIdMatch) {
+      const [cat] = await db.select({ id: applicationCategoriesTable.id })
+        .from(applicationCategoriesTable)
+        .where(and(eq(applicationCategoriesTable.name, applicationCategory), eq(applicationCategoriesTable.productTypeId, typeIdMatch)));
+      if (cat) catIdMatch = cat.id;
+    }
+
+    const [appCatsMaster, typesMaster, brandsMaster] = await Promise.all([
+      db.select({ value: applicationCategoriesTable.name })
+        .from(applicationCategoriesTable)
+        .where(typeIdMatch ? eq(applicationCategoriesTable.productTypeId, typeIdMatch) : undefined),
+      db.select({ value: productTypesTable.name }).from(productTypesTable),
+      db.select({ value: brandsTable.name })
+        .from(brandsTable)
+        .where(and(
+          typeIdMatch ? eq(brandsTable.productTypeId, typeIdMatch) : undefined,
+          catIdMatch ? eq(brandsTable.applicationCategoryId, catIdMatch) : undefined
+        ))
+    ]);
+
+    const merge = (prod: any[], master: any[]) => {
+      const allValues = [...prod.map(r => r.value), ...master.map(r => r.value)]
+        .filter(Boolean)
+        .map(v => String(v).trim());
+      
+      // Use a Map to deduplicate case-insensitively while preserving one version
+      const uniqueMap = new Map();
+      allValues.forEach(v => {
+        const lower = v.toLowerCase();
+        if (!uniqueMap.has(lower)) {
+          uniqueMap.set(lower, v);
+        }
+      });
+      
+      return Array.from(uniqueMap.values()).sort((a, b) => a.localeCompare(b));
+    };
+
+    res.json({
+      applicationCategories: merge(appCatsProduct, appCatsMaster),
+      productTypes: merge(typesProduct, typesMaster),
+      brands: merge(brandsProduct, brandsMaster),
+    });
+  } catch (err: any) {
+    console.error("DEBUG: Filter fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch filters", message: err.message });
+  }
+});
+
 router.get("/products", authenticate, async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
   const offset = (page - 1) * limit;
   const search = req.query.search as string | undefined;
   const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
-  const vehicleBrand = req.query.vehicleBrand as string | undefined;
+  const applicationCategory = req.query.applicationCategory as string | undefined;
+  const productType = req.query.productType as string | undefined;
+  const brandName = req.query.brandName as string | undefined;
 
   const conditions = [];
-  if (categoryId) conditions.push(eq(productsTable.categoryId, categoryId));
-  if (vehicleBrand) conditions.push(like(productsTable.vehicleBrand, `%${vehicleBrand}%`));
+  if (categoryId) {
+    conditions.push(eq(productsTable.categoryId, categoryId));
+  }
+  if (productType && productType !== "all") {
+    const searchVal = productType.endsWith('s') ? productType.slice(0, -1) : productType;
+    conditions.push(or(
+      eq(productsTable.productType, productType),
+      like(productsTable.productType, `%${searchVal}%`),
+      like(productsTable.categoryName, `%${searchVal}%`)
+    ));
+  } else if (!categoryId) {
+    // If no specific category or type is requested, show products that have either field
+    conditions.push(or(
+      sql`${productsTable.productType} IS NOT NULL AND ${productsTable.productType} != ''`,
+      sql`${productsTable.categoryName} IS NOT NULL AND ${productsTable.categoryName} != ''`
+    ));
+  }
+  
+  if (applicationCategory) {
+    conditions.push(eq(productsTable.applicationCategory, applicationCategory));
+  }
+
+  if (brandName) conditions.push(like(productsTable.brandName, `%${brandName}%`));
   if (search) {
     conditions.push(
       or(
-        like(productsTable.name, `%${search}%`),
-        like(productsTable.skuCode, `%${search}%`),
         like(productsTable.kcplCode, `%${search}%`),
-        like(productsTable.vehicleBrand, `%${search}%`),
-        like(productsTable.engineBrand, `%${search}%`),
+        like(productsTable.brandName, `%${search}%`),
+        like(productsTable.modelName, `%${search}%`),
+        like(productsTable.productType, `%${search}%`),
       )
     );
   }
@@ -44,23 +163,22 @@ router.get("/products", authenticate, async (req, res) => {
     .select({
       id: productsTable.id,
       categoryId: productsTable.categoryId,
-      categoryName: categoriesTable.name,
-      name: productsTable.name,
-      skuCode: productsTable.skuCode,
-      kcplCode: productsTable.kcplCode,
-      vehicleBrand: productsTable.vehicleBrand,
-      engineBrand: productsTable.engineBrand,
+      categoryName: productsTable.categoryName,
+      applicationCategory: productsTable.applicationCategory,
       productType: productsTable.productType,
+      brandName: productsTable.brandName,
+      kcplCode: productsTable.kcplCode,
+      modelName: productsTable.modelName,
       size: productsTable.size,
+      adaptablePartNo: productsTable.adaptablePartNo,
       imageUrl: productsTable.imageUrl,
       specifications: productsTable.specifications,
       createdAt: productsTable.createdAt,
       updatedAt: productsTable.updatedAt,
     })
     .from(productsTable)
-    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(where)
-    .orderBy(productsTable.id)
+    .orderBy(desc(productsTable.id))
     .limit(limit)
     .offset(offset);
 
@@ -79,21 +197,20 @@ router.get("/products/:id", authenticate, async (req, res) => {
     .select({
       id: productsTable.id,
       categoryId: productsTable.categoryId,
-      categoryName: categoriesTable.name,
-      name: productsTable.name,
-      skuCode: productsTable.skuCode,
-      kcplCode: productsTable.kcplCode,
-      vehicleBrand: productsTable.vehicleBrand,
-      engineBrand: productsTable.engineBrand,
+      categoryName: productsTable.categoryName,
+      applicationCategory: productsTable.applicationCategory,
       productType: productsTable.productType,
+      brandName: productsTable.brandName,
+      kcplCode: productsTable.kcplCode,
+      modelName: productsTable.modelName,
       size: productsTable.size,
+      adaptablePartNo: productsTable.adaptablePartNo,
       imageUrl: productsTable.imageUrl,
       specifications: productsTable.specifications,
       createdAt: productsTable.createdAt,
       updatedAt: productsTable.updatedAt,
     })
     .from(productsTable)
-    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(eq(productsTable.id, id));
   if (!product) { res.status(404).json({ error: "Not found" }); return; }
   const imageTruncated = typeof product.imageUrl === 'string' && product.imageUrl.length === 65535;
@@ -102,15 +219,30 @@ router.get("/products/:id", authenticate, async (req, res) => {
 
 router.post("/products", authenticate, requirePermission("products:write"), async (req, res) => {
   try {
-    let { categoryId, name, skuCode, kcplCode, vehicleBrand, engineBrand, productType, size, imageUrl, specifications } = req.body;
+    let { categoryId, categoryName, applicationCategory, productType, brandName, kcplCode, modelName, size, adaptablePartNo, imageUrl, specifications } = req.body;
     
-    console.log('DEBUG POST /products: Received body:', { categoryId, name, skuCode, kcplCode, vehicleBrand, engineBrand, productType, size, imageUrl: imageUrl ? 'present' : 'null', specifications: typeof specifications });
+    let numericCategoryId = categoryId ? Number(categoryId) : null;
     
-    const numericCategoryId = Number(categoryId);
-    if (!categoryId || isNaN(numericCategoryId)) {
-      res.status(400).json({ error: "Valid category ID is required" });
+    // If we have a productType but no categoryId, we can still proceed
+    if (!numericCategoryId && !productType) {
+      res.status(400).json({ error: "Product Type or Category is required" });
       return;
     }
+
+    if (numericCategoryId && !categoryName) {
+      const cats = await db.select({ name: categoriesTable.name })
+        .from(categoriesTable)
+        .where(eq(categoriesTable.id, numericCategoryId));
+      if (cats.length > 0) {
+        categoryName = cats[0].name;
+      }
+    }
+
+    // Default categoryName to productType if still missing
+    if (!categoryName && productType) {
+      categoryName = productType;
+    }
+
     if (typeof imageUrl === "string" && imageUrl.length > MAX_IMAGE_URL_LENGTH) {
       res.status(413).json({ error: "Image data is too large. Please upload a smaller image or use a URL." });
       return;
@@ -123,59 +255,87 @@ router.post("/products", authenticate, requirePermission("products:write"), asyn
       }
     }
 
-    console.log(`DEBUG: Creating product for category ${numericCategoryId}`);
+    console.log(`DEBUG: Saving product for category ${numericCategoryId}, kcplCode: ${kcplCode}`);
 
-    const inserted = await db.insert(productsTable).values({ 
-      categoryId: numericCategoryId, 
-      name: name || null, 
-      skuCode: skuCode || null, 
-      kcplCode: kcplCode || null, 
-      vehicleBrand: vehicleBrand || null, 
-      engineBrand: engineBrand || null, 
-      productType: productType || null, 
-      size: size || null, 
-      imageUrl: imageUrl || null, 
+    // Check if product with this kcplCode already exists for Upsert-like behavior
+    let existingProduct: any = null;
+    if (kcplCode) {
+      const [p] = await db.select().from(productsTable).where(eq(productsTable.kcplCode, kcplCode)).limit(1);
+      existingProduct = p;
+    }
+
+    const data: any = {
+      categoryId: numericCategoryId,
+      categoryName: categoryName || null,
+      applicationCategory: applicationCategory || null,
+      productType: productType || null,
+      brandName: brandName || null,
+      kcplCode: kcplCode || null,
+      modelName: modelName || null,
+      size: size || null,
+      adaptablePartNo: adaptablePartNo || null,
+      imageUrl: imageUrl || null,
       specifications: specifications || null,
-      createdAt: sql`NOW()`,
       updatedAt: sql`NOW()`
-    }).$returningId();
+    };
 
-    const insertId = inserted[0]?.id;
-    if (!insertId) {
-      console.error('ERROR: Insert did not return id');
-      res.status(500).json({ error: "Product created but insert id missing" });
+    let resultId: number;
+
+    if (existingProduct) {
+      console.log(`DEBUG: Product ${kcplCode} exists (ID: ${existingProduct.id}), updating...`);
+      await db.update(productsTable).set(data).where(eq(productsTable.id, existingProduct.id));
+      resultId = existingProduct.id;
+    } else {
+      console.log(`DEBUG: Creating new product...`);
+      const [insertResult] = await (db.insert(productsTable).values({
+        ...data,
+        createdAt: sql`NOW()`,
+      }) as any).execute();
+      
+      resultId = insertResult.insertId;
+      if (!resultId) {
+        // Fallback for returning id logic
+        const [p] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.kcplCode, kcplCode as string)).limit(1);
+        resultId = p?.id;
+      }
+    }
+
+    if (!resultId) {
+      console.error('ERROR: Could not resolve product ID');
+      res.status(500).json({ error: "Failed to save product" });
       return;
     }
-    console.log('DEBUG: Inserted product with id:', insertId);
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, insertId));
+
+    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, resultId));
     
     if (!product) {
-      console.error('ERROR: Could not retrieve product after insert');
-      res.status(500).json({ error: "Product created but could not be retrieved" });
+      console.error('ERROR: Could not retrieve product after save');
+      res.status(500).json({ error: "Product saved but could not be retrieved" });
       return;
     }
 
     await logActivity({ 
-      action: "Created", 
+      action: existingProduct ? "Updated" : "Created", 
       entityType: "Product", 
       entityId: product.id, 
-      details: `Product "${product.name || product.skuCode || 'New SKU'}" created` 
+      details: `Product "${product.kcplCode || 'New SKU'}" ${existingProduct ? 'updated via upsert' : 'created'}` 
     });
 
-    // Resolve category name for the created product so frontend shows it immediately
-    const cats = await db.select({ catName: categoriesTable.name })
-      .from(categoriesTable)
-      .where(eq(categoriesTable.id, product.categoryId));
-    const catName = cats.length > 0 ? cats[0].catName : null;
-
-    res.status(201).json({ ...product, categoryName: catName });
+    res.status(existingProduct ? 200 : 201).json(product);
   } catch (err: any) {
-    console.error("ERROR: Product creation failed:", err);
+    console.error("ERROR: Product save process failed:", err);
+    
+    // Fallback if manual check missed something (e.g. race condition)
+    if (err?.code === "ER_DUP_ENTRY" || err?.message?.includes("Duplicate entry")) {
+      res.status(409).json({ error: "Duplicate KCPL Code", message: "A product with this KCPL Code already exists." });
+      return;
+    }
+    
     if (err?.code === "ER_NET_PACKET_TOO_LARGE" || /max_allowed_packet/i.test(err?.message || "")) {
       res.status(413).json({ error: "Image data is too large. Please upload a smaller image or use a URL." });
       return;
     }
-    res.status(500).json({ error: "Creation Failed", message: err.message });
+    res.status(500).json({ error: "Save Failed", message: err.message });
   }
 });
 
@@ -188,11 +348,8 @@ router.put("/products/:id", authenticate, requirePermission("products:write"), a
 
   try {
     const { 
-      categoryId, name, skuCode, kcplCode, vehicleBrand, engineBrand, 
-      productType, size, imageUrl, specifications 
+      categoryId, categoryName, applicationCategory, productType, brandName, kcplCode, modelName, size, adaptablePartNo, imageUrl, specifications 
     } = req.body;
-    
-    console.log('DEBUG PUT /products:', id, 'Received body:', { categoryId, name, skuCode, kcplCode, vehicleBrand, engineBrand, productType, size, imageUrl: imageUrl ? 'present' : 'null', specifications: typeof specifications });
     
     console.log(`DEBUG: Updating product ${id}.`);
     
@@ -201,20 +358,31 @@ router.put("/products/:id", authenticate, requirePermission("products:write"), a
     };
     
     if (categoryId !== undefined) {
-      const numericCategoryId = Number(categoryId);
-      if (!Number.isFinite(numericCategoryId)) {
-        res.status(400).json({ error: "Valid category ID is required" });
-        return;
-      }
+      const numericCategoryId = categoryId ? Number(categoryId) : null;
       updateData.categoryId = numericCategoryId;
+      
+      if (numericCategoryId && !categoryName) {
+         const cats = await db.select({ name: categoriesTable.name })
+           .from(categoriesTable)
+           .where(eq(categoriesTable.id, numericCategoryId));
+         if (cats.length > 0) {
+           updateData.categoryName = cats[0].name;
+         }
+      }
     }
-    if (name !== undefined) updateData.name = name || null;
-    if (skuCode !== undefined) updateData.skuCode = skuCode || null;
-    if (kcplCode !== undefined) updateData.kcplCode = kcplCode || null;
-    if (vehicleBrand !== undefined) updateData.vehicleBrand = vehicleBrand || null;
-    if (engineBrand !== undefined) updateData.engineBrand = engineBrand || null;
+    
+    if (categoryName !== undefined && categoryName !== null && categoryName !== "") {
+      updateData.categoryName = categoryName;
+    }
+
+    if (applicationCategory !== undefined) updateData.applicationCategory = applicationCategory || null;
     if (productType !== undefined) updateData.productType = productType || null;
+    if (brandName !== undefined) updateData.brandName = brandName || null;
+    if (kcplCode !== undefined) updateData.kcplCode = kcplCode || null;
+    if (modelName !== undefined) updateData.modelName = modelName || null;
     if (size !== undefined) updateData.size = size || null;
+    if (adaptablePartNo !== undefined) updateData.adaptablePartNo = adaptablePartNo || null;
+
     if (imageUrl !== undefined) {
       if (typeof imageUrl === "string" && imageUrl.length > MAX_IMAGE_URL_LENGTH) {
         res.status(413).json({ error: "Image data is too large. Please upload a smaller image or use a URL." });
@@ -250,15 +418,10 @@ router.put("/products/:id", authenticate, requirePermission("products:write"), a
       action: "Updated", 
       entityType: "Product", 
       entityId: id, 
-      details: `Product "${product.name || product.skuCode || 'SKU'}" updated` 
+      details: `Product "${product.kcplCode || 'SKU'}" updated` 
     });
 
-    const cats = await db.select({ catName: categoriesTable.name })
-      .from(categoriesTable)
-      .where(eq(categoriesTable.id, product.categoryId));
-    const catName = cats.length > 0 ? cats[0].catName : null;
-    
-    res.json({ ...product, categoryName: catName });
+    res.json(product);
   } catch (err: any) {
     console.error("CRITICAL: Product update failed!");
     console.error("Error Code:", err.code);
@@ -286,7 +449,7 @@ router.delete("/products/:id", authenticate, requirePermission("products:delete"
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id));
     if (!product) { res.status(404).json({ error: "Not found" }); return; }
     await db.delete(productsTable).where(eq(productsTable.id, id));
-    await logActivity({ action: "Deleted", entityType: "Product", entityId: id, details: `Product "${product.name || product.skuCode || 'SKU'}" deleted` });
+    await logActivity({ action: "Deleted", entityType: "Product", entityId: id, details: `Product "${product.kcplCode || 'SKU'}" deleted` });
     res.status(204).send();
   } catch (err: any) {
     console.error("ERROR: Product delete failed:", err);

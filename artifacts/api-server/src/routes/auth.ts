@@ -144,7 +144,7 @@ router.get("/auth/me", async (req, res) => {
   if (!result) { res.status(401).json({ error: "User not found" }); return; }
 
   let permissions: string[] = [];
-  const raw = result.permissions;
+  const raw = result.permissions as any;
 
   if (Array.isArray(raw)) {
     permissions = raw;

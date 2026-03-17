@@ -5,10 +5,10 @@ import { Loader2 } from "lucide-react";
 interface UserData {
   id: number;
   username: string;
-  email: string;
-  roleId: number | null;
-  roleName: string | null;
-  permissions: string[];
+  email?: string;
+  roleId?: number | null;
+  roleName?: string | null;
+  permissions?: string[];
   isActive: boolean;
   createdAt: string;
 }

@@ -4,8 +4,11 @@ import dotenv from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, "../../../.env");
-dotenv.config({ path: envPath });
+dotenv.config({ path: envPath, override: true });
 console.log('Loaded env from', envPath, 'DATABASE_URL=', process.env.DATABASE_URL);
+
+// Enforce port 5000 to prevent conflicts with frontend dev server
+process.env.PORT = "5000";
 
 import app from "./app";
 

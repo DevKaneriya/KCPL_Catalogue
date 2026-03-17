@@ -39,43 +39,33 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
     [onChange]
   );
 
-  const handleFile = (file: File) => {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const src = e.target?.result;
-      if (!src || typeof src !== "string") return;
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append("image", file);
 
-      const img = new Image();
-      img.onload = () => {
-        const maxSide = Math.max(img.width, img.height);
-        const scale = maxSide > MAX_DIMENSION ? MAX_DIMENSION / maxSide : 1;
-        const targetWidth = Math.max(1, Math.round(img.width * scale));
-        const targetHeight = Math.max(1, Math.round(img.height * scale));
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-        const canvas = document.createElement("canvas");
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          onChange(src);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
 
-        const forceJpeg = file.type === "image/png" && file.size > 1_000_000;
-        const outputType = forceJpeg ? "image/jpeg" : file.type;
-        const dataUrl = outputType === "image/jpeg"
-          ? canvas.toDataURL(outputType, JPEG_QUALITY)
-          : canvas.toDataURL(outputType);
-
-        onChange(dataUrl);
-      };
-      img.onerror = () => onChange(src);
-      img.src = src;
-    };
-    reader.readAsDataURL(file);
+      const data = await response.json();
+      onChange(data.url);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      // Fallback or show toast here later if needed
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,9 +85,11 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
   return (
     <div className="space-y-4">
       {value ? (
-        <div className="relative group rounded-xl overflow-hidden border border-border/50 bg-muted/20 flex items-center justify-center min-h-[180px] max-h-[260px]">
-          <img src={value} alt="Uploaded preview" className="max-w-full max-h-[240px] object-contain" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+        <div className="relative group rounded-xl border border-border/50 bg-muted/20 flex flex-col items-center justify-center p-4">
+          <div className="w-full relative flex items-center justify-center" style={{ minHeight: '200px' }}>
+            <img src={value} alt="Uploaded preview" className="w-full h-auto object-contain" style={{ maxHeight: '300px' }} />
+          </div>
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm rounded-xl">
             <Button type="button" variant="destructive" size="sm" onClick={() => onChange("")}>
               <X className="w-4 h-4 mr-2" />
               Remove Image
@@ -145,9 +137,11 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
               />
               <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 <div className="w-12 h-12 rounded-full bg-background shadow-sm border border-border/50 flex items-center justify-center mb-2">
-                  <UploadCloud className="w-6 h-6 text-primary" />
+                  <UploadCloud className={`w-6 h-6 text-primary ${isUploading ? "animate-pulse" : ""}`} />
                 </div>
-                <p className="font-medium text-foreground">Click to upload or drag and drop</p>
+                <p className="font-medium text-foreground">
+                  {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
+                </p>
                 <p className="text-xs">SVG, PNG, JPG or GIF (max. 5MB)</p>
               </div>
             </div>

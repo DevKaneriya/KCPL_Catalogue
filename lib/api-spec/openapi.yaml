@@ -330,7 +330,15 @@ paths:
           in: query
           schema:
             type: integer
-        - name: vehicleBrand
+        - name: applicationCategory
+          in: query
+          schema:
+            type: string
+        - name: productType
+          in: query
+          schema:
+            type: string
+        - name: brandName
           in: query
           schema:
             type: string
@@ -359,6 +367,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/Product"
 
+  /products/filters:
+    get:
+      operationId: getProductFilters
+      tags: [products]
+      summary: Get distinct filter values for products
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+        - name: applicationCategory
+          in: query
+          schema:
+            type: string
+        - name: productType
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Distinct filter values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationCategories:
+                    type: array
+                    items:
+                      type: string
+                  productTypes:
+                    type: array
+                    items:
+                      type: string
+                  brands:
+                    type: array
+                    items:
+                      type: string
   /products/{id}:
     get:
       operationId: getProduct
@@ -594,6 +640,12 @@ paths:
                   type: array
                   items:
                     type: integer
+                applicationCategory:
+                  type: string
+                brandName:
+                  type: string
+                productType:
+                  type: string
               required: [sections]
       responses:
         "200":
@@ -627,13 +679,150 @@ paths:
               schema:
                 $ref: "#/components/schemas/ActivityLogResponse"
 
+  /masters/brands:
+    get:
+      operationId: getBrands
+      tags: [masters]
+      parameters:
+        - name: productTypeId
+          in: query
+          schema: { type: integer }
+          description: Filter by product type ID
+        - name: applicationCategoryId
+          in: query
+          schema: { type: integer }
+          description: Filter by application category ID
+      responses:
+        "200":
+          description: List of brands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Brand"
+    post:
+      operationId: createBrand
+      tags: [masters]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, productTypeId, applicationCategoryId]
+              properties:
+                name: { type: string }
+                productTypeId: { type: integer }
+                applicationCategoryId: { type: integer }
+      responses:
+        "201":
+          description: Created brand
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Brand"
+
+  /masters/application-categories:
+    get:
+      operationId: getAppCats
+      tags: [masters]
+      parameters:
+        - name: productTypeId
+          in: query
+          schema: { type: integer }
+          description: Filter by product type ID
+      responses:
+        "200":
+          description: List of application categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppCat"
+    post:
+      operationId: createAppCat
+      tags: [masters]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, productTypeId]
+              properties:
+                name: { type: string }
+                productTypeId: { type: integer }
+      responses:
+        "201":
+          description: Created application category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppCat"
+
+  /masters/product-types:
+    get:
+      operationId: getProductTypesMaster
+      tags: [masters]
+      responses:
+        "200":
+          description: List of product types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductType"
+    post:
+      operationId: createProductType
+      tags: [masters]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        "201":
+          description: Created product type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductType"
+
 components:
   schemas:
+    Brand:
+      type: object
+      required: [id, name, productTypeId, applicationCategoryId]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        productTypeId: { type: integer }
+        applicationCategoryId: { type: integer }
+        createdAt: { type: string, format: date-time }
+    AppCat:
+      type: object
+      required: [id, name, productTypeId]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        productTypeId: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ProductType:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
     HealthStatus:
       type: object
       properties:
-        status:
-          type: string
+        status: { type: string }
+        message: { type: string }
       required: [status]
 
     ErrorResponse:
@@ -791,19 +980,19 @@ components:
           type: integer
         categoryName:
           type: string
-        name:
-          type: string
-        skuCode:
-          type: string
-        kcplCode:
-          type: string
-        vehicleBrand:
-          type: string
-        engineBrand:
+        applicationCategory:
           type: string
         productType:
           type: string
+        brandName:
+          type: string
+        kcplCode:
+          type: string
+        modelName:
+          type: string
         size:
+          type: string
+        adaptablePartNo:
           type: string
         imageUrl:
           type: string
@@ -823,19 +1012,21 @@ components:
       properties:
         categoryId:
           type: integer
-        name:
+        categoryName:
           type: string
-        skuCode:
-          type: string
-        kcplCode:
-          type: string
-        vehicleBrand:
-          type: string
-        engineBrand:
+        applicationCategory:
           type: string
         productType:
           type: string
+        brandName:
+          type: string
+        kcplCode:
+          type: string
+        modelName:
+          type: string
         size:
+          type: string
+        adaptablePartNo:
           type: string
         imageUrl:
           type: string

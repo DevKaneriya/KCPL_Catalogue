@@ -77,6 +77,8 @@ async function run() {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
     ) ENGINE=InnoDB;`);
+    // Ensure existing installs can store full base64 images without truncation.
+    await conn.query(`ALTER TABLE products MODIFY image_url LONGTEXT;`);
 
     await conn.query(`CREATE TABLE IF NOT EXISTS content_pages (
       id INT PRIMARY KEY AUTO_INCREMENT,
@@ -87,6 +89,7 @@ async function run() {
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB;`);
+    await conn.query(`ALTER TABLE content_pages MODIFY content LONGTEXT, MODIFY image_url LONGTEXT;`);
 
     await conn.query(`CREATE TABLE IF NOT EXISTS activity_logs (
       id INT PRIMARY KEY AUTO_INCREMENT,

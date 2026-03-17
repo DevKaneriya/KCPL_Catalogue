@@ -8,7 +8,9 @@ import { AuthProvider, useAuth } from "./contexts/auth-context";
 import Dashboard from "./pages/dashboard";
 import Products from "./pages/products";
 import ProductForm from "./pages/product-form";
-import Categories from "./pages/categories";
+import ProductTypes from "./pages/categories";
+import ApplicationCategories from "./pages/application-categories";
+import Brands from "./pages/brands";
 import ContentPages from "./pages/content-pages";
 import ContentPageForm from "./pages/content-page-form";
 import CatalogIndex from "./pages/catalog-index";
@@ -64,8 +66,10 @@ function Router() {
       <ProtectedRoute path="/products/:categorySlug/new" component={ProductForm} />
       <ProtectedRoute path="/products/:categorySlug/:id/edit" component={ProductForm} />
       
-      {/* Category Routes */}
-      <ProtectedRoute path="/categories" component={Categories} />
+      {/* Catalog Master Data Management */}
+      <ProtectedRoute path="/product-types" component={ProductTypes} />
+      <ProtectedRoute path="/application-categories" component={ApplicationCategories} />
+      <ProtectedRoute path="/brands" component={Brands} />
       
       {/* Content Pages */}
       <ProtectedRoute path="/content" component={ContentPages} />

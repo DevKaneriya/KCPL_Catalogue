@@ -9,13 +9,14 @@ import type { CreateProductRequestSpecifications } from "./createProductRequestS
 
 export interface CreateProductRequest {
   categoryId?: number;
-  name?: string;
-  skuCode?: string;
-  kcplCode?: string;
-  vehicleBrand?: string;
-  engineBrand?: string;
+  categoryName?: string;
+  applicationCategory?: string;
   productType?: string;
+  brandName?: string;
+  kcplCode?: string;
+  modelName?: string;
   size?: string;
+  adaptablePartNo?: string;
   imageUrl?: string;
   specifications?: CreateProductRequestSpecifications;
 }

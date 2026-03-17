@@ -10,7 +10,9 @@ import {
   Loader2,
   Users,
   Shield,
-  LogOut
+  LogOut,
+  FolderTree,
+  Factory
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -28,19 +30,19 @@ import {
   SidebarMenuSubItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { useListCategories } from "@workspace/api-client-react";
+import { useGetProductTypesMaster } from "@workspace/api-client-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/auth-context";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { data: categories, isLoading } = useListCategories();
+  const { data: masterProductTypes, isLoading } = useGetProductTypesMaster();
   const { user, logout, checkPermission } = useAuth();
 
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
-    if (path !== "/" && location.startsWith(path)) return true;
+    if (path !== "/" && decodeURIComponent(location).startsWith(path)) return true;
     return false;
   };
 
@@ -86,7 +88,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
+ 
         {/* Catalog Management */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase tracking-wider text-xs font-display">Catalog</SidebarGroupLabel>
@@ -107,11 +109,11 @@ export function AppSidebar() {
                         <div className="flex items-center p-2 text-sm text-sidebar-foreground/50">
                           <Loader2 className="w-3 h-3 mr-2 animate-spin" /> Loading...
                         </div>
-                      ) : categories?.map((cat) => (
-                        <SidebarMenuSubItem key={cat.id}>
-                          <SidebarMenuSubButton asChild data-active={isActive(`/products/${cat.slug}`)} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                            <Link href={`/products/${cat.slug}`}>
-                              <span>{cat.name}</span>
+                      ) : masterProductTypes?.map((type) => (
+                        <SidebarMenuSubItem key={type.id}>
+                          <SidebarMenuSubButton asChild data-active={isActive(`/products/${type.name}`)} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                            <Link href={`/products/${type.name}`}>
+                              <span>{type.name}</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -129,14 +131,34 @@ export function AppSidebar() {
               </Collapsible>
 
               {showCategories && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild data-active={isActive("/categories")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
-                    <Link href="/categories">
-                      <Tags className="w-4 h-4" />
-                      <span>Categories</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild data-active={isActive("/product-types")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                      <Link href="/product-types">
+                        <Tags className="w-4 h-4" />
+                        <span>Product Types</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild data-active={isActive("/application-categories")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                      <Link href="/application-categories">
+                        <FolderTree className="w-4 h-4" />
+                        <span>Application Categories</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild data-active={isActive("/brands")} className="data-[active=true]:bg-sidebar-accent transition-colors hover:bg-sidebar-accent/50 rounded-lg">
+                      <Link href="/brands">
+                        <Factory className="w-4 h-4" />
+                        <span>Brands</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
             </SidebarMenu>
           </SidebarGroupContent>

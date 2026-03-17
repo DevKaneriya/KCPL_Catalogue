@@ -9,4 +9,7 @@
 export type GetCatalogPreviewDataBody = {
   sections: string[];
   categoryIds?: number[];
+  applicationCategory?: string;
+  brandName?: string;
+  productType?: string;
 };
