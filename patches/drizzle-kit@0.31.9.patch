@@ -1,0 +1,26 @@
+diff --git a/bin.cjs b/bin.cjs
+--- a/bin.cjs
++++ b/bin.cjs
+@@ -18402,10 +18402,12 @@
+-      for (const checkConstraintRow of checkConstraints) {
+-        const constraintName = checkConstraintRow["CONSTRAINT_NAME"];
+-        const constraintValue = checkConstraintRow["CHECK_CLAUSE"];
+-        const tableName = checkConstraintRow["TABLE_NAME"];
+-        const tableInResult = result[tableName];
+-        tableInResult.checkConstraint[constraintName] = {
+-          name: constraintName,
+-          value: constraintValue
+-        };
+-      }
++      for (const checkConstraintRow of checkConstraints) {
++        const constraintName = checkConstraintRow["CONSTRAINT_NAME"] ?? checkConstraintRow["constraint_name"];
++        const constraintValue = checkConstraintRow["CHECK_CLAUSE"] ?? checkConstraintRow["check_clause"];
++        const tableName = checkConstraintRow["TABLE_NAME"] ?? checkConstraintRow["table_name"];
++        const tableInResult = tableName ? result[tableName] : void 0;
++        if (!tableInResult || !constraintName) continue;
++        tableInResult.checkConstraint ??= {};
++        tableInResult.checkConstraint[constraintName] = {
++          name: constraintName,
++          value: constraintValue
++        };
++      }

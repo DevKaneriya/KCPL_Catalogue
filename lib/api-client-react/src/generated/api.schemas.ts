@@ -164,8 +164,11 @@ export interface IndexNode {
 export interface ContentPage {
   id: number;
   title: string;
+  slug?: string;
   content?: string;
   imageUrl?: string;
+  type: string;
+  category: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -173,8 +176,11 @@ export interface ContentPage {
 
 export interface CreateContentPageRequest {
   title?: string;
+  slug?: string;
   content?: string;
   imageUrl?: string;
+  type?: string;
+  category?: string;
   sortOrder?: number;
 }
 
@@ -214,6 +220,11 @@ export interface CatalogPreviewData {
   sections: string[];
 }
 
+export type CatalogStatsTopCategoriesItem = {
+  name: string;
+  count: number;
+};
+
 export type CatalogStatsCategoryBreakdownItem = {
   name: string;
   count: number;
@@ -230,8 +241,7 @@ export interface ActivityLog {
 }
 
 export interface CatalogStats {
-  totalRadiators: number;
-  totalCondensers: number;
+  topCategories: CatalogStatsTopCategoriesItem[];
   totalProducts: number;
   lastUpdated: string;
   recentActivity: ActivityLog[];

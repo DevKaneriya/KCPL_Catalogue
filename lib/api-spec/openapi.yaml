@@ -1077,9 +1077,15 @@ components:
           type: integer
         title:
           type: string
+        slug:
+          type: string
         content:
           type: string
         imageUrl:
+          type: string
+        type:
+          type: string
+        category:
           type: string
         sortOrder:
           type: integer
@@ -1089,16 +1095,22 @@ components:
         updatedAt:
           type: string
           format: date-time
-      required: [id, title, sortOrder, createdAt, updatedAt]
+      required: [id, title, sortOrder, type, category, createdAt, updatedAt]
 
     CreateContentPageRequest:
       type: object
       properties:
         title:
           type: string
+        slug:
+          type: string
         content:
           type: string
         imageUrl:
+          type: string
+        type:
+          type: string
+        category:
           type: string
         sortOrder:
           type: integer
@@ -1169,10 +1181,14 @@ components:
     CatalogStats:
       type: object
       properties:
-        totalRadiators:
-          type: integer
-        totalCondensers:
-          type: integer
+        topCategories:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              count: { type: integer }
+            required: [name, count]
         totalProducts:
           type: integer
         lastUpdated:
@@ -1192,7 +1208,7 @@ components:
               count:
                 type: integer
             required: [name, count]
-      required: [totalRadiators, totalCondensers, totalProducts, lastUpdated, recentActivity, categoryBreakdown]
+      required: [topCategories, totalProducts, lastUpdated, recentActivity, categoryBreakdown]
 
     ActivityLog:
       type: object

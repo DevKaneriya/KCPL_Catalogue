@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useListContentPages, useDeleteContentPage } from "@workspace/api-client-react";
 import { FileText, Plus, Edit, Trash2, GripVertical, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -90,7 +91,17 @@ export default function ContentPages() {
                 )}
                 
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg">{page.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg">{page.title}</h3>
+                    {page.type === "custom" ? (
+                      <Badge variant="secondary" className="text-[10px] h-5">Custom</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] h-5 bg-primary/5">Editor</Badge>
+                    )}
+                    {page.category && page.category !== "all" && (
+                      <Badge variant="outline" className="text-[10px] h-5 capitalize">{page.category}</Badge>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                     <span>Order: {page.sortOrder}</span>
                     <span>•</span>

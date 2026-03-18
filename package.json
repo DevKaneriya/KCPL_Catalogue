@@ -9,6 +9,11 @@
     "codegen": "pnpm --filter \"@workspace/api-spec\" run codegen"
   },
   "private": true,
+  "pnpm": {
+    "patchedDependencies": {
+      "drizzle-kit@0.31.9": "patches/drizzle-kit@0.31.9.patch"
+    }
+  },
   "devDependencies": {
     "mysql2": "^3.19.1",
     "prettier": "^3.8.1",

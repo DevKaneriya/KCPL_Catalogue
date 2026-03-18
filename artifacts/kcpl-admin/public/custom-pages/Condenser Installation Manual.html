@@ -1,0 +1,77 @@
+<style>
+  .custom-page-container {
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+  }
+  .steps-list {
+    counter-reset: custom-counter;
+    list-style: none;
+    padding: 0;
+  }
+  .step-item {
+    position: relative;
+    padding-left: 50px;
+    margin-bottom: 30px;
+  }
+  .step-item::before {
+    counter-increment: custom-counter;
+    content: counter(custom-counter);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 35px;
+    height: 35px;
+    background: #0284c7;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  .step-title {
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+  }
+  .step-desc {
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .warning-box {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    padding: 15px 20px;
+    margin-top: 40px;
+    border-radius: 0 8px 8px 0;
+  }
+</style>
+
+<div class="custom-page-container">
+  <h2 style="color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 30px;">Condenser Installation Manual</h2>
+  
+  <ul class="steps-list">
+    <li class="step-item">
+      <h3 class="step-title">System Depressurization</h3>
+      <p class="step-desc">Before unmounting the original condenser, strictly ensure that the entire A/C system has been properly evacuated by a certified professional using approved refrigerant recovery equipment.</p>
+    </li>
+    
+    <li class="step-item">
+      <h3 class="step-title">Mounting and Alignment</h3>
+      <p class="step-desc">Carefully position the new condenser into the vehicle's core support assembly. Ensure all mounting brackets align perfectly without forcing. Hand-tighten all mounting bolts before applying the final recommended torque.</p>
+    </li>
+    
+    <li class="step-item">
+      <h3 class="step-title">Connection Sealing</h3>
+      <p class="step-desc">Always use brand new, vehicle-specific O-rings or sealing washers on all inlet and outlet connections. Lightly lubricate these seals with the correct PAG or POE oil before carefully connecting the lines to prevent pinching or damage.</p>
+    </li>
+  </ul>
+
+  <div class="warning-box">
+    <strong style="color: #b45309;">⚠️ Critical Warning:</strong> Only use the exact refrigerant type and compressor oil specified by the vehicle manufacturer. Incorrect fluid combinations will severely damage the internal baffling of the condenser and void all warranty coverage immediately.
+  </div>
+</div>

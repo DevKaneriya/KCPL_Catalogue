@@ -49,25 +49,25 @@ router.get("/catalog-index", async (req, res) => {
 });
 
 router.get("/catalog/stats", async (_req, res) => {
-  const categories = await db.select().from(categoriesTable).orderBy(categoriesTable.id);
-  
-  const breakdown = await Promise.all(categories.map(async (cat) => {
-    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(productsTable).where(eq(productsTable.categoryId, cat.id));
-    return { name: cat.name, count };
-  }));
+  const [{ count: totalProductsRaw }] = await db.select({ count: sql<number>`count(*)` }).from(productsTable);
+  const totalProducts = Number(totalProductsRaw) || 0;
 
-  const radiatorCat = categories.find(c => c.slug === "radiators");
-  const condenserCat = categories.find(c => c.slug === "condensers");
+  const breakdownRaw = await db.select({
+    name: productsTable.productType,
+    count: sql<number>`count(*)`
+  }).from(productsTable).groupBy(productsTable.productType);
 
-  const totalRadiators = breakdown.find(b => b.name === (radiatorCat?.name))?.count ?? 0;
-  const totalCondensers = breakdown.find(b => b.name === (condenserCat?.name))?.count ?? 0;
-  const totalProducts = breakdown.reduce((sum, b) => sum + b.count, 0);
+  const breakdown = breakdownRaw.map(b => ({
+    name: b.name || "Uncategorized",
+    count: Number(b.count)
+  })).sort((a, b) => b.count - a.count);
+
+  const topCategories = breakdown.slice(0, 2);
 
   const recentActivity = await db.select().from(activityLogsTable).orderBy(desc(activityLogsTable.createdAt)).limit(5);
-
   const lastUpdated = recentActivity[0]?.createdAt ?? new Date();
 
-  res.json({ totalRadiators, totalCondensers, totalProducts, lastUpdated, recentActivity, categoryBreakdown: breakdown });
+  res.json({ topCategories, totalProducts, lastUpdated, recentActivity, categoryBreakdown: breakdown });
 });
 
   router.post("/catalog/preview-data", async (req, res) => {

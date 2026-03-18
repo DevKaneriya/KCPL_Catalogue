@@ -418,8 +418,11 @@ export const GetCatalogIndexResponse = zod.array(GetCatalogIndexResponseItem);
 export const ListContentPagesResponseItem = zod.object({
   id: zod.number(),
   title: zod.string(),
+  slug: zod.string().optional(),
   content: zod.string().optional(),
   imageUrl: zod.string().optional(),
+  type: zod.string(),
+  category: zod.string(),
   sortOrder: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
@@ -431,8 +434,11 @@ export const ListContentPagesResponse = zod.array(ListContentPagesResponseItem);
  */
 export const CreateContentPageBody = zod.object({
   title: zod.string().optional(),
+  slug: zod.string().optional(),
   content: zod.string().optional(),
   imageUrl: zod.string().optional(),
+  type: zod.string().optional(),
+  category: zod.string().optional(),
   sortOrder: zod.number().optional(),
 });
 
@@ -453,8 +459,11 @@ export const GetContentPageParams = zod.object({
 export const GetContentPageResponse = zod.object({
   id: zod.number(),
   title: zod.string(),
+  slug: zod.string().optional(),
   content: zod.string().optional(),
   imageUrl: zod.string().optional(),
+  type: zod.string(),
+  category: zod.string(),
   sortOrder: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
@@ -469,16 +478,22 @@ export const UpdateContentPageParams = zod.object({
 
 export const UpdateContentPageBody = zod.object({
   title: zod.string().optional(),
+  slug: zod.string().optional(),
   content: zod.string().optional(),
   imageUrl: zod.string().optional(),
+  type: zod.string().optional(),
+  category: zod.string().optional(),
   sortOrder: zod.number().optional(),
 });
 
 export const UpdateContentPageResponse = zod.object({
   id: zod.number(),
   title: zod.string(),
+  slug: zod.string().optional(),
   content: zod.string().optional(),
   imageUrl: zod.string().optional(),
+  type: zod.string(),
+  category: zod.string(),
   sortOrder: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
@@ -511,8 +526,12 @@ export const ExportCatalogResponse = zod.object({
  * @summary Get dashboard statistics
  */
 export const GetCatalogStatsResponse = zod.object({
-  totalRadiators: zod.number(),
-  totalCondensers: zod.number(),
+  topCategories: zod.array(
+    zod.object({
+      name: zod.string(),
+      count: zod.number(),
+    }),
+  ),
   totalProducts: zod.number(),
   lastUpdated: zod.date(),
   recentActivity: zod.array(
@@ -550,8 +569,11 @@ export const GetCatalogPreviewDataResponse = zod.object({
     zod.object({
       id: zod.number(),
       title: zod.string(),
+      slug: zod.string().optional(),
       content: zod.string().optional(),
       imageUrl: zod.string().optional(),
+      type: zod.string(),
+      category: zod.string(),
       sortOrder: zod.number(),
       createdAt: zod.date(),
       updatedAt: zod.date(),

@@ -71,6 +71,7 @@ export default function ExportCatalog() {
   }, [categories, masterProductTypes, defaultCategory, productType]);
 
   const [previewData, setPreviewData] = useState<CatalogPreviewData | null>(null);
+  const [customPageContents, setCustomPageContents] = useState<Record<number, string>>({});
   const [isDone, setIsDone] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -112,7 +113,33 @@ export default function ExportCatalog() {
           productType: selectedProductTypes.length > 0 ? selectedProductTypes[0] : (productType || undefined) 
       } },
       {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
+          const contents: Record<number, string> = {};
+          if (data.contentPages) {
+            for (const page of data.contentPages) {
+              if (page.type === 'custom') {
+                try {
+                  const res = await fetch(`/custom-pages/${page.slug}.html`);
+                  if (res.ok) {
+                    const htmlText = await res.text();
+                    if (htmlText.includes('<div id="root"></div>')) {
+                       throw new Error('Vite SPA Fallback - File truly missing');
+                    }
+                    contents[page.id] = htmlText;
+                  } else {
+                    throw new Error('Not found');
+                  }
+                } catch (e) {
+                  contents[page.id] = `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2;">
+                    <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: Custom Page Missing</h2>
+                    <p style="color: #334155; line-height: 1.6;">The preview engine attempted to load the manual HTML file for <strong>${page.title}</strong>, but the file doesn't exist.</p>
+                    <p style="color: #334155; line-height: 1.6;">To fix this, please explicitly create a file named exactly: <br/><strong style="color: #e11d48; font-size: 16px;">public/custom-pages/${page.slug}.html</strong></p>
+                  </div>`;
+                }
+              }
+            }
+          }
+          setCustomPageContents(contents);
           setPreviewData(data);
           setStep(2);
           setIsDone(false);
@@ -213,19 +240,32 @@ export default function ExportCatalog() {
         </div>
       </div>
 
-      ${showContent && contentPages.length > 0 ? contentPages.map(page => `
-        <div class="sheet page-break">
-          <h2 class="section-title">${page.title}</h2>
-          <div class="content-item">
-            ${page.imageUrl ? `<img src="${resolveUrl(page.imageUrl)}" class="content-img">` : ''}
-            <div class="content-html">${page.content || ''}</div>
+      ${showContent && contentPages.length > 0 ? contentPages.map(page => {
+        if (page.type === 'custom') {
+          return `
+          <div class="sheet page-break">
+            ${customPageContents[page.id] || ''}
+            <div class="footer">
+              <span>KCPL Catalog</span>
+              <span>${page.title}</span>
+            </div>
           </div>
-          <div class="footer">
-            <span>KCPL Catalog</span>
-            <span>${page.title}</span>
+          `;
+        }
+        return `
+          <div class="sheet page-break">
+            <h2 class="section-title">${page.title}</h2>
+            <div class="content-item">
+              ${page.imageUrl ? `<img src="${resolveUrl(page.imageUrl)}" class="content-img">` : ''}
+              <div class="content-html">${page.content || ''}</div>
+            </div>
+            <div class="footer">
+              <span>KCPL Catalog</span>
+              <span>${page.title}</span>
+            </div>
           </div>
-        </div>
-      `).join('') : ''}
+        `;
+      }).join('') : ''}
 
       ${showIndex && indexData.length > 0 ? `
         <div class="sheet page-break">

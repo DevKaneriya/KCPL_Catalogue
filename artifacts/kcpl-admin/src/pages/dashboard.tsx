@@ -47,31 +47,35 @@ export default function Dashboard() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <Card className="border-border/50 bg-card hover-elevate transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total Radiators</CardTitle>
-                  <Thermometer className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-display font-bold">{stats?.totalRadiators.toLocaleString() || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Active SKUs</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+            {stats?.topCategories?.map((cat, i) => (
+              <motion.div key={cat.name} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * (i + 1) }}>
+                <Card className="border-border/50 bg-card hover-elevate transition-all duration-300">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total {cat.name}</CardTitle>
+                    {cat.name.toLowerCase().includes('condenser') ? <Box className="h-4 w-4 text-primary" /> : <Thermometer className="h-4 w-4 text-primary" />}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-display font-bold">{cat.count.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Active SKUs</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <Card className="border-border/50 bg-card hover-elevate transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total Condensers</CardTitle>
-                  <Box className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-display font-bold">{stats?.totalCondensers.toLocaleString() || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Active SKUs</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+            {Array.from({ length: Math.max(0, 2 - (stats?.topCategories?.length || 0)) }).map((_, i) => (
+              <motion.div key={`empty-${i}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * ((stats?.topCategories?.length || 0) + i + 1) }}>
+                <Card className="border-border/50 bg-card/40">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Category</CardTitle>
+                    <Box className="h-4 w-4 text-muted-foreground/30" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-display font-bold text-muted-foreground/50">--</div>
+                    <p className="text-xs text-muted-foreground mt-1 text-muted-foreground/50">No data</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <Card className="border-border/50 bg-card hover-elevate transition-all duration-300">

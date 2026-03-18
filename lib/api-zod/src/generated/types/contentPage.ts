@@ -9,8 +9,11 @@
 export interface ContentPage {
   id: number;
   title: string;
+  slug?: string;
   content?: string;
   imageUrl?: string;
+  type: string;
+  category: string;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;

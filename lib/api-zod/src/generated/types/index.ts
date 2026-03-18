@@ -14,6 +14,7 @@ export * from "./catalogPreviewData";
 export * from "./catalogPreviewDataCategoriesItem";
 export * from "./catalogStats";
 export * from "./catalogStatsCategoryBreakdownItem";
+export * from "./catalogStatsTopCategoriesItem";
 export * from "./contentPage";
 export * from "./createAppCatBody";
 export * from "./createBrandBody";

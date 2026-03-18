@@ -25,10 +25,27 @@ router.get("/content-pages/:id", async (req, res) => {
 
 router.post("/content-pages", async (req, res) => {
   try {
-    const { title, content, imageUrl, sortOrder } = req.body;
+    const { title, content, imageUrl, sortOrder, type, category, slug } = req.body;
     if (!title) { res.status(400).json({ error: "Title is required" }); return; }
     const numericSortOrder = Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 0;
-    await db.insert(contentPagesTable).values({ title, content, imageUrl, sortOrder: numericSortOrder });
+    
+    let finalContent = content;
+    let finalImageUrl = imageUrl;
+    
+    if (type === "custom") {
+      finalContent = null;
+      finalImageUrl = null;
+    }
+
+    await db.insert(contentPagesTable).values({ 
+      title, 
+      slug: slug || null,
+      content: finalContent, 
+      imageUrl: finalImageUrl, 
+      sortOrder: numericSortOrder,
+      type: type || "editor",
+      category: category || "all"
+    });
 
     // No guaranteed insertId shape for all drivers; fetch the most recent page instead
     const pages = await db.select().from(contentPagesTable).orderBy(desc(contentPagesTable.id)).limit(1 as any);
@@ -55,12 +72,24 @@ router.put("/content-pages/reorder", async (req, res) => {
 router.put("/content-pages/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid content page id" }); return; }
-  const { title, content, imageUrl, sortOrder } = req.body;
+  const { title, content, imageUrl, sortOrder, type, category, slug } = req.body;
   const updates: Record<string, any> = { updatedAt: new Date() };
+
   if (title !== undefined) updates.title = title;
-  if (content !== undefined) updates.content = content;
-  if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+  if (slug !== undefined) updates.slug = slug;
   if (sortOrder !== undefined) updates.sortOrder = Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 0;
+  if (type !== undefined) updates.type = type;
+  if (category !== undefined) updates.category = category;
+
+  if (type === "custom" || updates.type === "custom") {
+    // If setting to custom, or it's currently custom in the request type update
+    updates.content = null;
+    updates.imageUrl = null;
+  } else {
+    if (content !== undefined) updates.content = content;
+    if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+  }
+
   await db.update(contentPagesTable).set(updates).where(eq(contentPagesTable.id, id));
   const [page] = await db.select().from(contentPagesTable).where(eq(contentPagesTable.id, id));
   if (!page) { res.status(404).json({ error: "Not found" }); return; }

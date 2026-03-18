@@ -7,10 +7,10 @@
  */
 import type { ActivityLog } from "./activityLog";
 import type { CatalogStatsCategoryBreakdownItem } from "./catalogStatsCategoryBreakdownItem";
+import type { CatalogStatsTopCategoriesItem } from "./catalogStatsTopCategoriesItem";
 
 export interface CatalogStats {
-  totalRadiators: number;
-  totalCondensers: number;
+  topCategories: CatalogStatsTopCategoriesItem[];
   totalProducts: number;
   lastUpdated: Date;
   recentActivity: ActivityLog[];

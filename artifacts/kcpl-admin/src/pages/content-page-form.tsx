@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useGetContentPage, useCreateContentPage, useUpdateContentPage } from "@workspace/api-client-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useGetContentPage, useCreateContentPage, useUpdateContentPage, useListCategories } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Loader2, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Heading3, Link as LinkIcon, AlignLeft, AlignCenter, AlignRight, ImageIcon } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -138,6 +139,10 @@ export default function ContentPageForm() {
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [sortOrder, setSortOrder] = useState<number>(0);
+  const [type, setType] = useState<string>("editor");
+  const [category, setCategory] = useState<string>("all");
+
+  const { data: categories } = useListCategories();
 
   useEffect(() => {
     if (page && isEdit) {
@@ -145,6 +150,8 @@ export default function ContentPageForm() {
       setContent(page.content || "");
       setImageUrl(page.imageUrl || "");
       setSortOrder(page.sortOrder);
+      setType(page.type || "editor");
+      setCategory(page.category || "all");
     }
   }, [page, isEdit]);
 
@@ -159,7 +166,9 @@ export default function ContentPageForm() {
       title,
       content: content || undefined,
       imageUrl: imageUrl || undefined,
-      sortOrder
+      sortOrder,
+      type,
+      category
     };
 
     if (isEdit && pageId) {
@@ -214,17 +223,36 @@ export default function ContentPageForm() {
                 <Label htmlFor="sortOrder" className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Sort Order</Label>
                 <Input id="sortOrder" type="number" value={sortOrder} onChange={e => setSortOrder(parseInt(e.target.value))} className="h-12" />
               </div>
+
+              <div className="space-y-2 md:col-span-2 text-left">
+                <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {categories?.map((cat: any) => (
+                      <SelectItem key={cat.id} value={cat.slug || cat.name}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Header Image (Optional)</Label>
-              <ImageUpload value={imageUrl} onChange={setImageUrl} />
-            </div>
+            {type === "editor" && (
+              <>
+                <div className="space-y-2 text-left mt-4">
+                  <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Header Image (Optional)</Label>
+                  <ImageUpload value={imageUrl} onChange={setImageUrl} />
+                </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Page Content</Label>
-              <RichTextEditor value={content} onChange={setContent} />
-            </div>
+                <div className="space-y-2 text-left">
+                  <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Page Content</Label>
+                  <RichTextEditor value={content} onChange={setContent} />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

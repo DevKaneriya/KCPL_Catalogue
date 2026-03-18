@@ -8,7 +8,10 @@
 
 export interface CreateContentPageRequest {
   title?: string;
+  slug?: string;
   content?: string;
   imageUrl?: string;
+  type?: string;
+  category?: string;
   sortOrder?: number;
 }
