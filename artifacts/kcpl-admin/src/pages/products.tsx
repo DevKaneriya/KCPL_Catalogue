@@ -82,9 +82,10 @@ export default function Products() {
   const limit = 50; 
 
   const { data: filters } = useGetProductFilters({
-    categoryId: undefined, // Focus on Product Type from Master Data
-    applicationCategory: appCategory === "all" ? undefined : appCategory,
-    productType: currentMasterType ? currentMasterType.name : (productType === "all" ? undefined : productType)
+    categoryId: undefined, 
+    // Fetch all available filter options independently
+    applicationCategory: undefined,
+    productType: undefined
   });
 
   useEffect(() => {
@@ -258,8 +259,6 @@ export default function Products() {
                     value={productType} 
                     onValueChange={(val) => {
                       setProductType(val);
-                      setAppCategory("all");
-                      setBrand("all");
                       setPage(1);
                     }}
                   >
@@ -281,13 +280,11 @@ export default function Products() {
                   value={appCategory} 
                   onValueChange={(val) => {
                     setAppCategory(val);
-                    setBrand("all");
                     setPage(1);
                   }}
-                  disabled={productType === "all"}
                 >
                   <SelectTrigger className="bg-background h-10 border-border/60">
-                    <SelectValue placeholder={productType === "all" ? "Select Type First" : "Application"} />
+                    <SelectValue placeholder="Application" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Applications</SelectItem>
@@ -305,10 +302,9 @@ export default function Products() {
                     setBrand(val);
                     setPage(1);
                   }}
-                  disabled={appCategory === "all"}
                 >
                   <SelectTrigger className="bg-background h-10 border-border/60">
-                    <SelectValue placeholder={appCategory === "all" ? "Select App First" : "Brand Name"} />
+                    <SelectValue placeholder="Brand Name" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Brands</SelectItem>

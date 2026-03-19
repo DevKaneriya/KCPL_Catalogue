@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design & Development</title>
+
+  <style>
+    .custom-page-container {
+      max-width: 900px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 30px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Logo */
+    .page-logo {
+      width: 120px;
+      margin-bottom: 20px;
+    }
+
+    /* Heading */
+    .section-label {
+      color: #0284c7;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .section-text {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #475569;
+      text-align: justify;
+    }
+
+    /* TOP SECTION */
+    .top-section {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .text-block {
+      flex: 1;
+    }
+
+    .image-block {
+      flex: 1;
+    }
+
+    .image-block img {
+      width: 100%;
+      border-radius: 6px;
+    }
+
+    /* BLUE SECTION (FINAL FIX) */
+    .blue-section {
+      display: flex;
+      gap: 20px;
+      background: #0284c7;
+      padding: 20px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    /* LEFT IMAGES */
+    .blue-left {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .blue-left img {
+      width: 100%;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    /* RIGHT TEXT */
+    .blue-right {
+      width: 50%;
+      color: #ffffff;
+      font-size: 14px;
+      line-height: 1.8;
+      text-align: justify;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 30px;
+      font-size: 13px;
+      color: #64748b;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="custom-page-container">
+
+    <!-- Logo -->
+    <img src="/images/logo.png" class="page-logo" alt="KCPL Logo">
+
+    <!-- Top Section -->
+    <div class="top-section">
+
+      <div class="text-block">
+        <h3 class="section-label">DESIGN & DEVELOPMENT</h3>
+        <p class="section-text">
+          Innovation and precision come together to shape the future of cooling
+          technology. We pride ourselves on our formal and clear-cut process flow
+          diagrams, meticulously designed to ensure maximum efficiency throughout
+          every stage of product development.
+          <br><br>
+          We understand the importance of a well-structured design and development
+          process. Our team of experienced engineers follows a systematic approach,
+          incorporating industry best practices and utilizing advanced tools to
+          deliver cooling solutions that meet and exceed customer requirements.
+        </p>
+      </div>
+
+      <div class="image-block">
+        <img src="/images/non-tech-pages/Machine-design.png" alt="Machine">
+      </div>
+
+    </div>
+
+    <!-- BLUE SECTION (FIXED PROPERLY) -->
+    <div class="blue-section">
+
+      <!-- LEFT SIDE IMAGES -->
+      <div class="blue-left">
+        <img src="/images/non-tech-pages/Meeting.png" alt="Meeting">
+        <img src="/images/non-tech-pages/Computer-Work.png" alt="Work">
+      </div>
+
+      <!-- RIGHT SIDE CONTENT -->
+      <div class="blue-right">
+        <p>
+          One of the key tools we employ is Process Flow Diagrams (PFDs).
+          These diagrams provide a visual representation of the entire design
+          and development process, from initial concept to final product realization.
+          By mapping out each step and its interdependencies, PFDs help us streamline
+          operations, optimize resource allocation, and eliminate potential bottlenecks.
+          <br><br>
+          In addition to our process flow diagrams, we utilize Process Failure Mode
+          and Effects Analysis (PFMEA) tools to proactively identify and mitigate
+          risks throughout the design and development process.
+        </p>
+      </div>
+
+    </div>
+
+
+  </div>
+
+</body>
+
+</html>
