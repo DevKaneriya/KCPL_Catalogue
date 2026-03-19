@@ -55,23 +55,21 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="sidebar" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/20 p-1.5 rounded-xl shadow-sm">
+      <SidebarHeader className="px-4 pt-5 pb-4 border-b border-sidebar-border">
+        <div className="flex items-center justify-start">
+          <div className="shrink-0 flex items-center justify-start">
             <img 
-              src={`${import.meta.env.BASE_URL}images/kcpl-logo-mark.png`} 
+              src={`${import.meta.env.BASE_URL}images/logo-white.png`} 
               alt="KCPL Logo" 
-              className="w-6 h-6 object-contain"
+              className="w-24 object-contain select-none drop-shadow-[0_3px_14px_rgba(255,255,255,0.24)]"
             />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display font-bold text-lg tracking-wider leading-none text-sidebar-foreground">KCPL</span>
-            <span className="text-[0.65rem] text-sidebar-foreground/60 uppercase tracking-widest leading-none mt-1">Catalog Admin</span>
           </div>
         </div>
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent
+        className="pr-1 [scrollbar-width:thin] [scrollbar-color:hsl(var(--sidebar-accent))_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-sidebar-accent/70 [&::-webkit-scrollbar-thumb:hover]:bg-sidebar-accent [&::-webkit-scrollbar-corner]:bg-transparent"
+      >
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase tracking-wider text-xs font-display">Overview</SidebarGroupLabel>
@@ -103,7 +101,7 @@ export function AppSidebar() {
                       <ChevronRight className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
-                  <CollapsibleContent>
+                  <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                     <SidebarMenuSub>
                       {isLoading ? (
                         <div className="flex items-center p-2 text-sm text-sidebar-foreground/50">

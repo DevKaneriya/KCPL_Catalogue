@@ -184,3 +184,38 @@
   height: 0;
   pointer-events: none;
 }
+
+/* Collapsible animation for sidebar product type dropdown */
+@keyframes collapsible-down {
+  from {
+    height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.animate-collapsible-down {
+  animation: collapsible-down 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-collapsible-up {
+  animation: collapsible-up 220ms cubic-bezier(0.4, 0, 1, 1);
+}

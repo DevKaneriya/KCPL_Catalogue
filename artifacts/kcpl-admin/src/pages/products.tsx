@@ -20,7 +20,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/use-debounce";
-import { PackageSearch, Plus, Search, Edit, Trash2, ImageOff, Loader2, Download, Table2, FilterX } from "lucide-react";
+import { PackageSearch, Plus, Search, Edit, Trash2, ImageOff, Loader2, Download, Table2, FilterX, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
@@ -79,7 +79,7 @@ export default function Products() {
   const debouncedSearch = useDebounce(searchTerm, 500);
   
   const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
-  const limit = 50; 
+  const limit = 7; 
 
   const { data: filters } = useGetProductFilters({
     categoryId: undefined, 
@@ -429,27 +429,35 @@ export default function Products() {
           </Table>
         </div>
         
-        {data && (data as any).totalPages > 1 && (
-          <div className="p-4 border-t border-border/50 flex justify-between items-center bg-muted/10">
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={page === 1}
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <div className="flex items-center gap-2">
-               <span className="text-sm font-medium text-muted-foreground">Page <span className="text-foreground">{page}</span> of {(data as any).totalPages}</span>
+        {data && (data as any).total > 0 && (
+          <div className="p-4 border-t border-border/50 bg-muted/10 flex items-center justify-center sm:justify-end">
+            <div className="inline-flex items-center gap-3">
+              <span className="text-base font-medium tabular-nums">
+                {Math.min((page - 1) * limit + 1, (data as any).total)} - {Math.min(page * limit, (data as any).total)} of {(data as any).total}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:text-muted-foreground/40"
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:text-muted-foreground/40"
+                  disabled={page === (data as any).totalPages}
+                  onClick={() => setPage((p) => Math.min((data as any).totalPages, p + 1))}
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={page === (data as any).totalPages}
-              onClick={() => setPage(p => Math.min((data as any).totalPages, p + 1))}
-            >
-              Next
-            </Button>
           </div>
         )}
       </div>
