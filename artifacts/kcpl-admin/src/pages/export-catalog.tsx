@@ -94,7 +94,6 @@ export default function ExportCatalog() {
     [visibleContentPages],
   );
 
-
   const getDefaultPageIdsForType = (typeName: string) =>
     visibleContentPages
       .filter(
@@ -160,6 +159,44 @@ export default function ExportCatalog() {
   const [isDone, setIsDone] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const PRODUCTS_PER_PAGE = 12;
+  const INDEX_ROWS_PER_PAGE = 30;
+
+  const totalSheets = useMemo(() => {
+    if (!previewData) return 0;
+    const contentCount = previewData.contentPages?.length || 0;
+    const cats = previewData.categories || [];
+    const catSheets = cats.reduce((acc, cat) => acc + Math.max(1, Math.ceil(cat.products.length / PRODUCTS_PER_PAGE)), 0);
+    
+    let indexSheets = 0;
+    let detailSheets = 0;
+    if (includeIndexPages) {
+        let totalTOCRows = 0;
+        const brandsOverall = new Set<string>();
+        const totalProducts = cats.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+        
+        cats.forEach(cat => {
+          const brands = new Set(cat.products?.map((p: any) => p.brandName || "Other"));
+          totalTOCRows += (1 + brands.size);
+          brands.forEach((b: any) => brandsOverall.add(b.toUpperCase()));
+        });
+        
+        indexSheets = Math.max(1, Math.ceil(totalTOCRows / 24));
+        
+        let totalDetailRowsCount = 0;
+        cats.forEach(cat => {
+            totalDetailRowsCount += 1; // Type header
+            const appCats = new Set(cat.products?.map((p: any) => p.applicationCategory || "General"));
+            totalDetailRowsCount += appCats.size;
+            const brandsByCat = new Set(cat.products?.map((p: any) => p.brandName || "Other"));
+            totalDetailRowsCount += (brandsByCat.size * 2); // Header row + Badge row
+            totalDetailRowsCount += (cat.products?.length || 0);
+        });
+        detailSheets = Math.max(1, Math.ceil(totalDetailRowsCount / 15));
+    }
+    
+    return 1 + contentCount + indexSheets + detailSheets + catSheets;
+  }, [previewData, includeIndexPages]);
 
   const toggleType = (typeName: string) => {
     setSelectedTypeNames((prev) =>
@@ -324,12 +361,6 @@ export default function ExportCatalog() {
     const indexData = data.index || [];
     const showContent = contentPages.length > 0;
     const showIndex = includeIndexPages && indexData.length > 0;
-    const contentCount = showContent ? contentPages.length : 0;
-    const indexCount = showIndex && indexData.length > 0 ? 1 : 0;
-    const categoryStartPage = 1 + contentCount + indexCount + 1;
-    const categoryPageMap = new Map<number, number>(
-      cats.map((cat: any, idx: number) => [cat.id, categoryStartPage + idx])
-    );
 
     const styles = `
       @page { size: A4; margin: 0; }
@@ -380,8 +411,141 @@ export default function ExportCatalog() {
       .product-sku { font-size: 8pt; color: #0d9488; font-weight: 600; }
       .product-info { font-size: 7.5pt; color: #64748b; margin-top: 2px; }
 
-      .footer { position: absolute; bottom: 10mm; left: 14mm; right: 14mm; font-size: 8pt; color: #94a3b8; display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 3mm; }
+      .footer { position: absolute; bottom: 10mm; left: 14mm; right: 14mm; font-size: 8pt; color: #94a3b8; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 3mm; }
+      .page-number-box { background: #006eb3; color: white; padding: 2px 10px; border-radius: 4px; font-weight: 700; font-size: 9pt; justify-self: center; }
+      
+      /* TOC Styles */
+      .toc-header { background: #006eb3; color: white; padding: 12px 20px; font-weight: 800; font-size: 11pt; text-transform: uppercase; display: flex; justify-content: space-between; border-radius: 4px; margin-bottom: 8mm; letter-spacing: 1px; }
+      .toc-cat-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6mm; margin-bottom: 4mm; color: #006eb3; font-weight: 800; font-size: 14pt; text-transform: uppercase; }
+      .toc-cat-dots { flex: 1; border-bottom: 2px dotted #cbd5e1; margin: 0 12px; position: relative; top: -5px; }
+      .toc-brand-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3.5mm; padding-left: 6mm; color: #475569; font-size: 11pt; font-weight: 700; text-transform: uppercase; }
+      .toc-brand-dots { flex: 1; border-bottom: 1.5px dotted #e2e8f0; margin: 0 10px; position: relative; top: -5px; }
+      .toc-page { color: #006eb3; font-weight: 800; min-width: 60px; text-align: right; font-family: 'Courier New', monospace; font-size: 12pt; }
+
+      /* Detail Index Styles (Teal SKU List) */
+      .detail-table-teal { width: 100%; border-collapse: collapse; margin-bottom: 8mm; }
+      .detail-table-teal th { background: #0d9488; color: white; padding: 10px 10px; text-align: left; font-size: 8.5pt; text-transform: uppercase; border-right: 1px solid #14b8a6; }
+      .detail-table-teal td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 8.5pt; color: #334155; vertical-align: middle; }
+      .detail-table-teal .page-col { text-align: center; width: 70px; font-weight: 700; color: #0d9488; border-left: 1px solid #f1f5f9; }
+      .detail-table-teal .adaptable-col { font-weight: 700; color: #0f172a; }
+      .detail-table-teal tr:hover td { background: #f8fafc; }
+
+      .detail-type-banner { background: #006eb3; color: white; padding: 10px 15px; font-weight: 800; font-size: 16pt; margin: 5mm 0 3mm 0; border-radius: 4px; text-transform: uppercase; }
+      .detail-app-subtitle { color: #0d9488; font-weight: 800; font-size: 12pt; margin: 4mm 0 2mm 5px; text-transform: uppercase; border-left: 4px solid #0d9488; padding-left: 10px; }
+      .detail-brand-badge { background: #1e293b; color: white; padding: 4px 12px; font-weight: 700; font-size: 10pt; display: inline-block; border-radius: 4px; margin-top: 3mm; text-transform: uppercase; }
+      .detail-repeat-header th { background: #0d9488; color: white; padding: 7px 10px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border-right: 1px solid #14b8a6; font-weight: 800; }
     `;
+
+    const PRODUCTS_PER_PAGE = 12;
+    const INDEX_ROWS_PER_PAGE = 30;
+
+    const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+      const chunks: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) {
+        chunks.push(arr.slice(i, i + size));
+      }
+      return chunks;
+    };
+
+    // Track dynamic pagination
+    let globalPageCounter = 0;
+    
+    // 1. Cover
+    globalPageCounter++;
+    const coverPageNo = globalPageCounter;
+
+    // 2. Content Pages
+    const contentPageMappings = contentPages.map(page => {
+      globalPageCounter++;
+      return { ...page, pageNum: globalPageCounter };
+    });
+
+    // 4. Category Pages Mapping (Preliminary)
+    const categoryMappings = cats.map(cat => {
+      const productChunks = chunkArray(cat.products, PRODUCTS_PER_PAGE);
+      return { ...cat, productChunks };
+    });
+
+    // 3. Table of Contents (TOC) - Preliminary structure to get page count
+    const tocRowsRaw: any[] = [];
+    categoryMappings.forEach(cat => {
+      const brands = Array.from(new Set(cat.products.map((p: any) => (p.brandName || "Other").toUpperCase()))).sort();
+      tocRowsRaw.push({ type: 'cat', name: cat.name });
+      brands.forEach(b => tocRowsRaw.push({ type: 'brand', name: b }));
+    });
+
+    const indexChunksRaw = chunkArray(tocRowsRaw, 24);
+    const indexPageCount = (showIndex && indexChunksRaw.length > 0) ? indexChunksRaw.length : 0;
+    const indexStartPage = globalPageCounter + 1;
+    globalPageCounter += indexPageCount;
+
+    // 4. Product Detail Index Calculation
+    const detailIndexRows: any[] = [];
+    categoryMappings.forEach(cat => {
+      detailIndexRows.push({ type: 'type', name: cat.name });
+      
+      const prodsInCat = cat.products || [];
+      const appCats = Array.from(new Set(prodsInCat.map((p: any) => (p.applicationCategory || "General").toUpperCase()))).sort();
+      
+      appCats.forEach((appCat: string) => {
+        detailIndexRows.push({ type: 'appCat', name: appCat });
+        
+        const brands = Array.from(new Set(prodsInCat.filter((p: any) => (p.applicationCategory || "General").toUpperCase() === appCat).map((p: any) => (p.brandName || "Other").toUpperCase()))).sort();
+        
+        brands.forEach((brand: string) => {
+          detailIndexRows.push({ type: 'brand', name: brand });
+          const prods = prodsInCat.filter((p: any) => (p.applicationCategory || "General").toUpperCase() === appCat && (p.brandName || "Other").toUpperCase() === brand);
+          prods.forEach((p: any) => detailIndexRows.push({ type: 'product', ...p }));
+        });
+      });
+    });
+
+    const detailChunks = chunkArray(detailIndexRows, 15); // Further reduced for repeating headers
+    const detailPageCount = (showIndex && detailChunks.length > 0) ? detailChunks.length : 0;
+    const detailStartPage = globalPageCounter + 1;
+    globalPageCounter += detailPageCount;
+
+    // 5. Final Category Paging
+    let currentCatPage = globalPageCounter + 1;
+    const categoryPageMap = new Map<any, number>();
+    const finalCategoryMappings = categoryMappings.map(cat => {
+      const startPage = currentCatPage;
+      categoryPageMap.set(cat.id, startPage);
+      currentCatPage += cat.productChunks.length;
+      return { ...cat, startPage };
+    });
+
+    // 6. Build Final TOC with Ranges
+    const tocRows: any[] = [];
+    finalCategoryMappings.forEach(cat => {
+      const brandRanges: Record<string, { start: number; end: number }> = {};
+      cat.productChunks.forEach((chunk: any[], chunkIdx: number) => {
+        const pageNo = cat.startPage + chunkIdx;
+        chunk.forEach(p => {
+          const b = (p.brandName || "Other").toUpperCase();
+          if (!brandRanges[b]) {
+            brandRanges[b] = { start: pageNo, end: pageNo };
+          } else {
+            brandRanges[b].end = pageNo;
+          }
+        });
+      });
+
+      const catRange = cat.productChunks.length > 1 
+        ? `${cat.startPage} - ${cat.startPage + cat.productChunks.length - 1}`
+        : `${cat.startPage}`;
+      
+      tocRows.push({ type: 'cat', name: cat.name, range: catRange });
+
+      Object.entries(brandRanges)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([name, range]) => {
+          const brandRange = range.start === range.end ? `${range.start}` : `${range.start} - ${range.end}`;
+          tocRows.push({ type: 'brand', name, range: brandRange });
+        });
+    });
+
+    const indexChunks = chunkArray(tocRows, 24);
 
     const resolveUrl = (url?: string) => {
       if (!url) return '';
@@ -400,18 +564,20 @@ export default function ExportCatalog() {
         </div>
         <div class="footer">
           <span>KCPL © ${new Date().getFullYear()}</span>
-          <span>Catalog Cover</span>
+          <span class="page-number-box">${coverPageNo}</span>
+          <span style="text-align: right;">Catalog Cover</span>
         </div>
       </div>
 
-      ${showContent && contentPages.length > 0 ? contentPages.map(page => {
+      ${showContent && contentPageMappings.length > 0 ? contentPageMappings.map(page => {
         if (page.type === 'custom') {
           return `
           <div class="sheet page-break">
             ${customPageContents[page.id] || ''}
             <div class="footer">
               <span>KCPL Catalog</span>
-              <span>${page.title}</span>
+              <span class="page-number-box">${page.pageNum}</span>
+              <span style="text-align: right;">${page.title}</span>
             </div>
           </div>
           `;
@@ -425,63 +591,114 @@ export default function ExportCatalog() {
             </div>
             <div class="footer">
               <span>KCPL Catalog</span>
-              <span>${page.title}</span>
+              <span class="page-number-box">${page.pageNum}</span>
+              <span style="text-align: right;">${page.title}</span>
             </div>
           </div>
         `;
       }).join('') : ''}
 
-      ${showIndex && indexData.length > 0 ? `
+      ${showIndex && indexChunks.length > 0 ? indexChunks.map((chunk: any[], idx: number) => `
         <div class="sheet page-break">
-          <h2 class="section-title">Product Index</h2>
-          <table class="index-table">
-            <thead>
-              <tr>
-                <th>Brand</th>
-                <th>Model / Size</th>
-                <th>KCPL Code</th>
-                <th>Adaptable Part</th>
-                <th class="page-col">Page No</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${indexData.flatMap((brand: any) => brand.sizes.flatMap((size: any) => size.products.map((p: any) => `
-                <tr>
-                  <td>${brand.brand}</td>
-                  <td>${size.size}</td>
-                  <td>${p.kcplCode || '—'}</td>
-                  <td><strong>${p.adaptablePartNo || '—'}</strong></td>
-                  <td class="page-col">${categoryPageMap.get(p.categoryId) ?? '—'}</td>
-                </tr>
-              `))).join('')}
-            </tbody>
-          </table>
+          <div class="toc-header">
+            <span>Brand</span>
+            <span>Page No.</span>
+          </div>
+          
+          <div class="toc-body">
+            ${chunk.map(row => {
+              if (row.type === 'cat') {
+                return `
+                  <div class="toc-cat-row">
+                    <span>${row.name}</span>
+                    <div class="toc-cat-dots"></div>
+                    <span class="toc-page">${row.range}</span>
+                  </div>
+                `;
+              }
+              return `
+                <div class="toc-brand-row">
+                  <span>${row.name}</span>
+                  <div class="toc-brand-dots"></div>
+                  <span class="toc-page">${row.range}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
           <div class="footer">
             <span>KCPL Catalog</span>
-            <span>Index</span>
+            <span class="page-number-box">${indexStartPage + idx}</span>
+            <span style="text-align: right;">Table of Contents</span>
           </div>
         </div>
-      ` : ''}
+      `).join('') : ''}
 
-      ${cats.map(cat => `
+      ${showIndex && detailChunks.length > 0 ? detailChunks.map((chunk: any[], idx: number) => `
         <div class="sheet page-break">
-          <h2 class="section-title">${cat.name}</h2>
+          <h2 class="section-title">Detail Product Index</h2>
+          
+          <table class="detail-table-teal">
+            <tbody>
+              ${chunk.map(row => {
+                if (row.type === 'type') {
+                  return `<tr><td colspan="4" style="border: none; padding: 0;"><div class="detail-type-banner">${row.name}</div></td></tr>`;
+                }
+                if (row.type === 'appCat') {
+                  return `<tr><td colspan="4" style="border: none; padding: 0;"><div class="detail-app-subtitle">${row.name}</div></td></tr>`;
+                }
+                if (row.type === 'brand') {
+                  return `
+                    <tr><td colspan="4" style="border: none; padding: 10px 0 0 0;"><div class="detail-brand-badge">${row.name}</div></td></tr>
+                    <tr class="detail-repeat-header">
+                      <th>Model / Size</th>
+                      <th>KCPL Code</th>
+                      <th>Adaptable Part</th>
+                      <th class="page-col" style="border-right:none;">P.No</th>
+                    </tr>
+                  `;
+                }
+                const p = row;
+                return `
+                  <tr>
+                    <td>${p.modelName || ''} ${p.size ? `• ${p.size}` : ''}</td>
+                    <td style="font-family: monospace;">${p.kcplCode || ''}</td>
+                    <td class="adaptable-col">${p.adaptablePartNo || ''}</td>
+                    <td class="page-col">${categoryPageMap.get(p.categoryId) ?? categoryPageMap.get(p.productType) ?? categoryPageMap.get(String(p.categoryId)) ?? '—'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <span>KCPL Catalog</span>
+            <span class="page-number-box">${detailStartPage + idx}</span>
+            <span style="text-align: right;">Product Detail Index</span>
+          </div>
+        </div>
+      `).join('') : ''}
+
+      ${finalCategoryMappings.map((cat: any) => cat.productChunks.map((chunk: any[], chunkIdx: number) => `
+        <div class="sheet page-break">
+          <h2 class="section-title">${cat.name} ${cat.productChunks.length > 1 ? `<span style="font-size: 10pt; color: #64748b; font-weight: normal; margin-left:10px;">(Part ${chunkIdx + 1})</span>` : ''}</h2>
           <div class="product-grid">
-            ${cat.products.map((p: any) => `
+            ${chunk.map((p: any) => `
               <div class="product-card">
                 ${p.imageUrl ? `<img src="${resolveUrl(p.imageUrl)}" class="product-img">` : `<div class="product-placeholder">No Image</div>`}
                 <div class="product-name">${p.modelName || 'Product'}</div>
                 <div class="product-sku">${p.kcplCode || 'CODE-000'}</div>
-                <div class="product-info">${p.brandName || ''} ${p.size ? `• ${p.size}` : ''}</div>
+                <div class="product-info">${p.brandName || ''} • ${p.size || 'No Size'}</div>
               </div>
             `).join('')}
           </div>
           <div class="footer">
             <span>KCPL Catalog</span>
-            <span>${cat.name}</span>
+            <span class="page-number-box">${cat.startPage + chunkIdx}</span>
+            <span style="text-align: right;">${cat.name}</span>
           </div>
         </div>
-      `).join('')}
+      `).join('')).join('')}
     `;
 
     if (bodyOnly) {
@@ -691,18 +908,7 @@ export default function ExportCatalog() {
                   <div className="p-6 space-y-4">
                     <h4 className="text-sm font-semibold uppercase text-muted-foreground">Content Pages</h4>
                     <div className="space-y-2">
-                      {(useMemo(() => [
-                        {
-                          key: "preset-all-pages",
-                          label: "All Available Pages",
-                          pageIds: allVisibleContentPageIds,
-                        },
-                        {
-                          key: "preset-none",
-                          label: "No Content Pages",
-                          pageIds: [],
-                        },
-                      ], [allVisibleContentPageIds])).map((option: { key: string; label: string; pageIds: number[] }) => (
+                      {contentPresetOptions.map((option) => (
                         <label
                           key={option.key}
                           className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
@@ -813,7 +1019,7 @@ export default function ExportCatalog() {
                     <div className="text-xs text-muted-foreground uppercase font-semibold">Content Pages</div>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
-                    <div className="text-2xl font-bold text-primary">{(previewData.categories?.length || 0) + (includeIndexPages ? 1 : 0) + ((previewData.contentPages?.length || 0) > 0 ? 1 : 0) + 1}</div>
+                    <div className="text-2xl font-bold text-primary">{totalSheets}</div>
                     <div className="text-xs text-muted-foreground uppercase font-semibold">Total Sheets</div>
                   </div>
                 </div>
@@ -858,4 +1064,3 @@ export default function ExportCatalog() {
     </Layout>
   );
 }
-
