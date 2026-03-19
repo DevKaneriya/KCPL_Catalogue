@@ -156,6 +156,10 @@ export default function ExportCatalog() {
 
   const [previewData, setPreviewData] = useState<CatalogPreviewData | null>(null);
   const [customPageContents, setCustomPageContents] = useState<Record<number, string>>({});
+  const [fixedPageContents, setFixedPageContents] = useState<{ firstPage: string; footerPage: string }>({
+    firstPage: "",
+    footerPage: "",
+  });
   const [isDone, setIsDone] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -195,8 +199,46 @@ export default function ExportCatalog() {
         detailSheets = Math.max(1, Math.ceil(totalDetailRowsCount / 15));
     }
     
-    return 1 + contentCount + indexSheets + detailSheets + catSheets;
+    return 2 + contentCount + indexSheets + detailSheets + catSheets;
   }, [previewData, includeIndexPages]);
+
+  const wrapExternalHtmlForSheet = (htmlText: string) => {
+    if (htmlText.includes('<div id="root"></div>')) {
+      throw new Error("Vite SPA Fallback - File truly missing");
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, "text/html");
+
+    doc.querySelectorAll("img").forEach((img) => {
+      const src = img.getAttribute("src");
+      if (!src || src.startsWith("http") || src.startsWith("data:")) return;
+      img.setAttribute("src", window.location.origin + (src.startsWith("/") ? src : `/${src}`));
+    });
+
+    const styles = Array.from(doc.querySelectorAll("style"))
+      .map((styleTag) => styleTag.textContent || "")
+      .join("\n");
+    const container = doc.querySelector(".custom-page-container") || doc.body;
+
+    return `
+      <style>
+        ${styles}
+        .custom-page-container { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; background: transparent !important; }
+        .custom-content-wrapper img { max-width: 100%; height: auto; }
+      </style>
+      <div class="custom-content-wrapper">
+        ${container.innerHTML}
+      </div>
+    `;
+  };
+
+  const loadExternalSheetHtml = async (path: string) => {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error("Not found");
+    const htmlText = (await res.text()).replace(/\{\{YEAR\}\}/g, String(new Date().getFullYear()));
+    return wrapExternalHtmlForSheet(htmlText);
+  };
 
   const toggleType = (typeName: string) => {
     setSelectedTypeNames((prev) =>
@@ -252,6 +294,8 @@ export default function ExportCatalog() {
       {
         onSuccess: async (data) => {
           const contents: Record<number, string> = {};
+          const fixedPages = { firstPage: "", footerPage: "" };
+
           if (data.contentPages) {
             for (const page of data.contentPages) {
               if (page.type === 'custom') {
@@ -260,40 +304,7 @@ export default function ExportCatalog() {
                   const res = await fetch(`/custom-pages/${customSlug}.html`);
                   if (res.ok) {
                     const htmlText = await res.text();
-                    if (htmlText.includes('<div id="root"></div>')) {
-                       throw new Error('Vite SPA Fallback - File truly missing');
-                    }
-                    
-                    // Add modern DOM parsing to clean up the HTML for printing
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(htmlText, 'text/html');
-                    
-                    // Fix absolute image paths to be fully qualified with origin
-                    // This is essential for both the Blob-window print and html2canvas
-                    doc.querySelectorAll('img').forEach(img => {
-                      const src = img.getAttribute('src');
-                      if (src && src.startsWith('/')) {
-                        img.setAttribute('src', window.location.origin + src);
-                      }
-                    });
-
-                    // Extract and scope styles
-                    const styles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
-                    
-                    // If there's a specific container, use its content to avoid nesting <html> tags
-                    const container = doc.querySelector('.custom-page-container') || doc.body;
-                    
-                    // Wrap with localized styles and ensure max-width doesn't clip on A4
-                    contents[page.id] = `
-                      <style>
-                        ${styles}
-                        .custom-page-container { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; background: transparent !important; }
-                        .custom-content-wrapper img { max-width: 100%; height: auto; }
-                      </style>
-                      <div class="custom-content-wrapper">
-                        ${container.innerHTML}
-                      </div>
-                    `;
+                    contents[page.id] = wrapExternalHtmlForSheet(htmlText);
                   } else {
                     throw new Error('Not found');
                   }
@@ -307,7 +318,29 @@ export default function ExportCatalog() {
               }
             }
           }
+
+          try {
+            fixedPages.firstPage = await loadExternalSheetHtml("/cover-pages/first-page.html");
+          } catch (e) {
+            fixedPages.firstPage = `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2;">
+              <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: First Page Missing</h2>
+              <p style="color: #334155; line-height: 1.6;">The fixed first page file could not be loaded.</p>
+              <p style="color: #334155; line-height: 1.6;">Expected file: <br/><strong style="color: #e11d48; font-size: 16px;">public/cover-pages/first-page.html</strong></p>
+            </div>`;
+          }
+
+          try {
+            fixedPages.footerPage = await loadExternalSheetHtml("/cover-pages/Footer.html");
+          } catch (e) {
+            fixedPages.footerPage = `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2;">
+              <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: Footer Page Missing</h2>
+              <p style="color: #334155; line-height: 1.6;">The fixed footer page file could not be loaded.</p>
+              <p style="color: #334155; line-height: 1.6;">Expected file: <br/><strong style="color: #e11d48; font-size: 16px;">public/cover-pages/Footer.html</strong></p>
+            </div>`;
+          }
+
           setCustomPageContents(contents);
+          setFixedPageContents(fixedPages);
           setPreviewData(data);
           setStep(2);
           setIsDone(false);
@@ -450,9 +483,9 @@ export default function ExportCatalog() {
     // Track dynamic pagination
     let globalPageCounter = 0;
     
-    // 1. Cover
+    // 1. Fixed First Page
     globalPageCounter++;
-    const coverPageNo = globalPageCounter;
+    const firstPageNo = globalPageCounter;
 
     // 2. Content Pages
     const contentPageMappings = contentPages.map(page => {
@@ -514,6 +547,7 @@ export default function ExportCatalog() {
       currentCatPage += cat.productChunks.length;
       return { ...cat, startPage };
     });
+    const footerPageNo = currentCatPage;
 
     // 6. Build Final TOC with Ranges
     const tocRows: any[] = [];
@@ -553,19 +587,22 @@ export default function ExportCatalog() {
       return window.location.origin + (url.startsWith('/') ? url : '/' + url);
     };
 
+    const firstPageContent = fixedPageContents.firstPage || `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2;">
+      <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: First Page Missing</h2>
+      <p style="color: #334155; line-height: 1.6;">Unable to load <strong>public/cover-pages/first-page.html</strong>.</p>
+    </div>`;
+    const footerPageContent = fixedPageContents.footerPage || `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2;">
+      <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: Footer Page Missing</h2>
+      <p style="color: #334155; line-height: 1.6;">Unable to load <strong>public/cover-pages/Footer.html</strong>.</p>
+    </div>`;
+
     const mainBody = `
       <div class="sheet">
-        <div class="cover">
-          <div class="cover-brand">KCPL</div>
-          <div class="cover-line"></div>
-          <div class="cover-title">Product Catalog</div>
-          <div class="cover-sub">Krishna Cooling Products Limited</div>
-          <div class="cover-year">${new Date().getFullYear()}</div>
-        </div>
+        ${firstPageContent}
         <div class="footer">
           <span>KCPL © ${new Date().getFullYear()}</span>
-          <span class="page-number-box">${coverPageNo}</span>
-          <span style="text-align: right;">Catalog Cover</span>
+          <span class="page-number-box">${firstPageNo}</span>
+          <span style="text-align: right;">First Page</span>
         </div>
       </div>
 
@@ -699,6 +736,15 @@ export default function ExportCatalog() {
           </div>
         </div>
       `).join('')).join('')}
+
+      <div class="sheet">
+        ${footerPageContent}
+        <div class="footer">
+          <span>KCPL Catalog</span>
+          <span class="page-number-box">${footerPageNo}</span>
+          <span style="text-align: right;">Footer</span>
+        </div>
+      </div>
     `;
 
     if (bodyOnly) {

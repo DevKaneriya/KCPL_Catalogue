@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KCPL First Page</title>
+  <style>
+    .custom-page-container {
+      height: 260mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-family: "Inter", Arial, sans-serif;
+    }
+
+    .cover-brand {
+      font-size: 60pt;
+      font-weight: 900;
+      color: #0d9488;
+      letter-spacing: -3px;
+      line-height: 1;
+    }
+
+    .cover-line {
+      width: 80px;
+      height: 5px;
+      background: #0d9488;
+      margin: 16px auto;
+    }
+
+    .cover-title {
+      font-size: 22pt;
+      font-weight: 700;
+      color: #1a1a1a;
+      line-height: 1.2;
+    }
+
+    .cover-sub {
+      font-size: 12pt;
+      color: #64748b;
+      margin-top: 8px;
+    }
+
+    .cover-year {
+      font-size: 14pt;
+      color: #0d9488;
+      font-weight: 700;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="custom-page-container">
+    <div class="cover-brand">KCPL</div>
+    <div class="cover-line"></div>
+    <div class="cover-title">Product Catalog</div>
+    <div class="cover-sub">Krishna Cooling Products Limited</div>
+    <div class="cover-year">{{YEAR}}</div>
+  </div>
+</body>
+</html>
