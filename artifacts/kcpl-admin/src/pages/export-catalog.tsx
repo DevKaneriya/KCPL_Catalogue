@@ -94,6 +94,7 @@ export default function ExportCatalog() {
     [visibleContentPages],
   );
 
+
   const getDefaultPageIdsForType = (typeName: string) =>
     visibleContentPages
       .filter(
@@ -690,7 +691,18 @@ export default function ExportCatalog() {
                   <div className="p-6 space-y-4">
                     <h4 className="text-sm font-semibold uppercase text-muted-foreground">Content Pages</h4>
                     <div className="space-y-2">
-                      {contentPresetOptions.map((option) => (
+                      {(useMemo(() => [
+                        {
+                          key: "preset-all-pages",
+                          label: "All Available Pages",
+                          pageIds: allVisibleContentPageIds,
+                        },
+                        {
+                          key: "preset-none",
+                          label: "No Content Pages",
+                          pageIds: [],
+                        },
+                      ], [allVisibleContentPageIds])).map((option: { key: string; label: string; pageIds: number[] }) => (
                         <label
                           key={option.key}
                           className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
