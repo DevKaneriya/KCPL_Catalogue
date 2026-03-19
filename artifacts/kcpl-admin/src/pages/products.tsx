@@ -161,6 +161,7 @@ export default function Products() {
 
   const handleDownloadCatalog = () => {
     const params = new URLSearchParams();
+    params.set("category", slug || "all");
     if (appCategory !== "all") params.set("appCategory", appCategory);
     if (brand !== "all") params.set("brand", brand);
     

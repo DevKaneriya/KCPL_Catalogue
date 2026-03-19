@@ -10,8 +10,14 @@ router.get("/activity-logs", async (req, res) => {
   const offset = (page - 1) * limit;
 
   const [{ total }] = await db.select({ total: sql<number>`count(*)` }).from(activityLogsTable);
-  const logs = await db.select().from(activityLogsTable).orderBy(desc(activityLogsTable.createdAt)).limit(limit).offset(offset);
-  res.json({ logs, total, page, limit });
+  const logs = await db
+    .select()
+    .from(activityLogsTable)
+    .orderBy(desc(activityLogsTable.createdAt), desc(activityLogsTable.id))
+    .limit(limit)
+    .offset(offset);
+
+  res.json({ logs, total: Number(total), page, limit });
 });
 
 export default router;

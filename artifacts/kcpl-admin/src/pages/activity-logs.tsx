@@ -12,14 +12,22 @@ export default function ActivityLogs() {
   const [page, setPage] = useState(1);
   const limit = 50;
 
-  const { data, isLoading } = useListActivityLogs({ page, limit });
+  const { data, isLoading, error } = useListActivityLogs({ page, limit });
 
   const getActionColor = (action: string) => {
     switch(action.toLowerCase()) {
-      case 'create': return 'bg-green-500/10 text-green-600 border-green-500/20';
-      case 'update': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-      case 'delete': return 'bg-red-500/10 text-red-600 border-red-500/20';
-      case 'export': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+      case 'create':
+      case 'created':
+        return 'bg-green-500/10 text-green-600 border-green-500/20';
+      case 'update':
+      case 'updated':
+        return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      case 'delete':
+      case 'deleted':
+        return 'bg-red-500/10 text-red-600 border-red-500/20';
+      case 'export':
+      case 'exported':
+        return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
       default: return 'bg-muted text-muted-foreground border-border';
     }
   };
@@ -55,6 +63,12 @@ export default function ActivityLogs() {
                       Loading logs...
                     </TableCell>
                   </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-destructive">
+                      Failed to load activity logs. Please refresh and try again.
+                    </TableCell>
+                  </TableRow>
                 ) : data?.logs?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
@@ -65,7 +79,9 @@ export default function ActivityLogs() {
                   data?.logs?.map((log) => (
                     <TableRow key={log.id} className="font-mono text-sm">
                       <TableCell className="text-muted-foreground">
-                        {format(new Date(log.createdAt), 'MMM dd, HH:mm:ss')}
+                        {log.createdAt
+                          ? format(new Date(log.createdAt), "MMM dd, HH:mm:ss")
+                          : "N/A"}
                       </TableCell>
                       <TableCell className="font-medium text-foreground">{log.user}</TableCell>
                       <TableCell>

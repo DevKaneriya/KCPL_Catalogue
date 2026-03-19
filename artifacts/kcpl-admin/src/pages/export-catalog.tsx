@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useListCategories, useGetCatalogPreviewData, useGetProductTypesMaster } from "@workspace/api-client-react";
+import { useGetCatalogPreviewData, useGetProductTypesMaster, useListContentPages } from "@workspace/api-client-react";
 
 type CatalogPreviewData = {
   contentPages?: any[];
@@ -11,64 +11,147 @@ type CatalogPreviewData = {
   index?: any[];
   sections?: string[];
 };
-import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, FileText, Settings2, Printer, ArrowLeft, FileDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, Settings2, Printer, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
-import { useEffect } from "react";
+
+const normalizeKey = (value?: string | null) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const canonicalKey = (value?: string | null) => normalizeKey(value).replace(/s$/, "");
+
+const matchesCategoryValue = (value?: string | null, target?: string | null) => {
+  const left = normalizeKey(value);
+  const right = normalizeKey(target);
+  if (!left || !right) return false;
+  return left === right || canonicalKey(left) === canonicalKey(right);
+};
 
 export default function ExportCatalog() {
-  const { data: categories } = useListCategories();
+  const { data: contentPages } = useListContentPages();
   const { data: masterProductTypes } = useGetProductTypesMaster();
   const previewMutation = useGetCatalogPreviewData();
   const { toast } = useToast();
 
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
-  const defaultCategory = searchParams.get('category');
+  const sourceCategory = searchParams.get("category");
   const appCategory = searchParams.get('appCategory');
   const brand = searchParams.get('brand');
   const productType = searchParams.get('productType');
+  const isFromAllProducts = !sourceCategory || matchesCategoryValue(sourceCategory, "all");
+
+  const activeSourceType = useMemo(() => {
+    if (!masterProductTypes?.length) return null;
+    const byProductType = productType && productType !== "all"
+      ? masterProductTypes.find((type) => matchesCategoryValue(type.name, productType))
+      : null;
+    if (byProductType) return byProductType;
+
+    if (!isFromAllProducts && sourceCategory) {
+      return (
+        masterProductTypes.find((type) => matchesCategoryValue(type.name, sourceCategory)) ||
+        null
+      );
+    }
+
+    return null;
+  }, [masterProductTypes, productType, isFromAllProducts, sourceCategory]);
 
   const [step, setStep] = useState(1);
-  const [sections, setSections] = useState<string[]>([]);
+  const [selectedTypeNames, setSelectedTypeNames] = useState<string[]>([]);
+  const [selectedContentPageIds, setSelectedContentPageIds] = useState<number[]>([]);
+  const [includeIndexPages, setIncludeIndexPages] = useState(true);
+  const [activeContentPreset, setActiveContentPreset] = useState<string | null>(null);
+  const [hasInitializedTypes, setHasInitializedTypes] = useState(false);
+  const [hasInitializedPages, setHasInitializedPages] = useState(false);
+
+  const sortedContentPages = useMemo(() => {
+    if (!Array.isArray(contentPages)) return [];
+    return [...contentPages].sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [contentPages]);
+
+  const visibleContentPages = useMemo(() => {
+    if (isFromAllProducts) return sortedContentPages;
+
+    const sourceTypeName = activeSourceType?.name || sourceCategory || productType;
+    return sortedContentPages.filter((page) => {
+      const pageCategory = page.category || "all";
+      return (
+        matchesCategoryValue(pageCategory, "all") ||
+        matchesCategoryValue(pageCategory, sourceTypeName)
+      );
+    });
+  }, [sortedContentPages, isFromAllProducts, activeSourceType, sourceCategory, productType]);
+
+  const allVisibleContentPageIds = useMemo(
+    () => visibleContentPages.map((page) => page.id),
+    [visibleContentPages],
+  );
+
+  const getDefaultPageIdsForType = (typeName: string) =>
+    visibleContentPages
+      .filter(
+        (page) =>
+          matchesCategoryValue(page.category, "all") ||
+          matchesCategoryValue(page.category, typeName),
+      )
+      .map((page) => page.id);
 
   useEffect(() => {
-    if (categories && masterProductTypes) {
-      if (!defaultCategory || defaultCategory === 'all') {
-        const typeIds = masterProductTypes.map(t => `type-${t.name}`);
-        setSections(['content', 'index', ...typeIds]);
-      } else {
-        // Coming from a specific category tab
-        const initialSections = ['content', 'index'];
-        
-        // Try to match by productType param first (Radiator, Condenser, etc.)
-        if (productType && productType !== 'all') {
-          const matchingType = masterProductTypes.find(t => 
-            t.name.toLowerCase() === productType.toLowerCase()
-          );
-          if (matchingType) {
-            initialSections.push(`type-${matchingType.name}`);
-          }
-        } else {
-          // Try to map from category slug (radiators -> Radiator)
-          const cat = categories.find(c => c.slug === defaultCategory || String(c.id) === defaultCategory);
-          if (cat) {
-            const matchingType = masterProductTypes.find(t => 
-              cat.name.includes(t.name) || t.name.includes(cat.name.replace(/s$/, ''))
-            );
-            if (matchingType) {
-              initialSections.push(`type-${matchingType.name}`);
-            } else {
-              initialSections.push(`cat-${cat.id}`);
-            }
-          }
-        }
-        setSections(initialSections);
-      }
+    if (hasInitializedTypes || !masterProductTypes?.length) return;
+
+    if (isFromAllProducts) {
+      setSelectedTypeNames(masterProductTypes.map((type) => type.name));
+    } else if (activeSourceType?.name) {
+      setSelectedTypeNames([activeSourceType.name]);
+    } else if (productType && productType !== "all") {
+      setSelectedTypeNames([productType]);
     }
-  }, [categories, masterProductTypes, defaultCategory, productType]);
+
+    setIncludeIndexPages(true);
+    setHasInitializedTypes(true);
+  }, [
+    hasInitializedTypes,
+    masterProductTypes,
+    isFromAllProducts,
+    activeSourceType,
+    productType,
+  ]);
+
+  useEffect(() => {
+    if (hasInitializedPages || !hasInitializedTypes || !Array.isArray(contentPages)) return;
+
+    if (isFromAllProducts) {
+      setSelectedContentPageIds(allVisibleContentPageIds);
+      setActiveContentPreset("preset-all-pages");
+      setHasInitializedPages(true);
+      return;
+    }
+
+    const sourceTypeName = activeSourceType?.name || sourceCategory || productType;
+    const defaultPageIds = sourceTypeName
+      ? getDefaultPageIdsForType(sourceTypeName)
+      : allVisibleContentPageIds;
+    setSelectedContentPageIds(defaultPageIds);
+    setActiveContentPreset(
+      sourceTypeName ? `preset-default-${normalizeKey(sourceTypeName)}` : "preset-default",
+    );
+    setHasInitializedPages(true);
+  }, [
+    hasInitializedPages,
+    hasInitializedTypes,
+    contentPages,
+    isFromAllProducts,
+    allVisibleContentPageIds,
+    activeSourceType,
+    sourceCategory,
+    productType,
+  ]);
 
   const [previewData, setPreviewData] = useState<CatalogPreviewData | null>(null);
   const [customPageContents, setCustomPageContents] = useState<Record<number, string>>({});
@@ -76,41 +159,56 @@ export default function ExportCatalog() {
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const toggleSection = (id: string) => {
-    setSections(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+  const toggleType = (typeName: string) => {
+    setSelectedTypeNames((prev) =>
+      prev.includes(typeName)
+        ? prev.filter((name) => name !== typeName)
+        : [...prev, typeName],
     );
   };
 
-  const selectAll = () => {
-    const allTypeIds = masterProductTypes?.map(t => `type-${t.name}`) || [];
-    setSections(['content', 'index', ...allTypeIds]);
+  const toggleContentPage = (pageId: number) => {
+    setActiveContentPreset(null);
+    setSelectedContentPageIds((prev) =>
+      prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId],
+    );
   };
 
-  const deselectAll = () => setSections([]);
-
-  const goToPreview = () => {
-    if (sections.length === 0) {
-      toast({ title: "Select at least one section", variant: "destructive" });
+  const applyContentPreset = (presetKey: string, pageIds: number[]) => {
+    if (activeContentPreset === presetKey) {
+      setActiveContentPreset(null);
+      setSelectedContentPageIds([]);
       return;
     }
-    const selectedCategoryIds = sections
-      .filter(s => s.startsWith('cat-'))
-      .map(s => parseInt(s.replace('cat-', '')));
-    
-    const selectedProductTypes = sections
-      .filter(s => s.startsWith('type-'))
-      .map(s => s.replace('type-', ''));
+    setActiveContentPreset(presetKey);
+    setSelectedContentPageIds(Array.from(new Set(pageIds)));
+  };
 
-    console.log("DEBUG: Requesting preview", { sections, selectedCategoryIds, selectedProductTypes });
+  const selectAllTypes = () => {
+    setSelectedTypeNames(masterProductTypes?.map((type) => type.name) || []);
+  };
+
+  const clearTypes = () => setSelectedTypeNames([]);
+
+  const goToPreview = () => {
+    if (selectedTypeNames.length === 0) {
+      toast({ title: "Select at least one category", variant: "destructive" });
+      return;
+    }
+
+    const sections = [
+      ...(selectedContentPageIds.length > 0 ? ["content"] : []),
+      ...selectedContentPageIds.map((id) => `content-page-${id}`),
+      ...(includeIndexPages ? ["index"] : []),
+      ...selectedTypeNames.map((name) => `type-${name}`),
+    ];
 
     previewMutation.mutate(
       { data: { 
           sections, 
-          categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined, 
           applicationCategory: appCategory || undefined, 
           brandName: brand || undefined, 
-          productType: selectedProductTypes.length > 0 ? selectedProductTypes[0] : (productType || undefined) 
+          productType: selectedTypeNames[0] || (productType || undefined),
       } },
       {
         onSuccess: async (data) => {
@@ -118,8 +216,9 @@ export default function ExportCatalog() {
           if (data.contentPages) {
             for (const page of data.contentPages) {
               if (page.type === 'custom') {
+                const customSlug = (page as any).slug || normalizeKey(page.title) || `page-${page.id}`;
                 try {
-                  const res = await fetch(`/custom-pages/${page.slug}.html`);
+                  const res = await fetch(`/custom-pages/${customSlug}.html`);
                   if (res.ok) {
                     const htmlText = await res.text();
                     if (htmlText.includes('<div id="root"></div>')) {
@@ -133,7 +232,7 @@ export default function ExportCatalog() {
                   contents[page.id] = `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2;">
                     <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: Custom Page Missing</h2>
                     <p style="color: #334155; line-height: 1.6;">The preview engine attempted to load the manual HTML file for <strong>${page.title}</strong>, but the file doesn't exist.</p>
-                    <p style="color: #334155; line-height: 1.6;">To fix this, please explicitly create a file named exactly: <br/><strong style="color: #e11d48; font-size: 16px;">public/custom-pages/${page.slug}.html</strong></p>
+                    <p style="color: #334155; line-height: 1.6;">To fix this, please explicitly create a file named exactly: <br/><strong style="color: #e11d48; font-size: 16px;">public/custom-pages/${customSlug}.html</strong></p>
                   </div>`;
                 }
               }
@@ -149,12 +248,49 @@ export default function ExportCatalog() {
     );
   };
 
+  const contentPresetOptions = useMemo(() => {
+    const options: Array<{ key: string; label: string; pageIds: number[] }> = [
+      { key: "preset-all-pages", label: "Select All Pages", pageIds: allVisibleContentPageIds },
+    ];
+
+    if (isFromAllProducts) {
+      for (const type of masterProductTypes || []) {
+        const pageIds = getDefaultPageIdsForType(type.name);
+        if (pageIds.length > 0) {
+          options.push({
+            key: `preset-default-${normalizeKey(type.name)}`,
+            label: `Select Default ${type.name} Pages`,
+            pageIds,
+          });
+        }
+      }
+    } else {
+      const sourceTypeName = activeSourceType?.name || sourceCategory || productType || "Category";
+      const pageIds = getDefaultPageIdsForType(sourceTypeName);
+      options.push({
+        key: `preset-default-${normalizeKey(sourceTypeName)}`,
+        label: `Select Default ${sourceTypeName} Pages`,
+        pageIds,
+      });
+    }
+
+    return options.filter((option) => option.pageIds.length > 0);
+  }, [
+    allVisibleContentPageIds,
+    isFromAllProducts,
+    masterProductTypes,
+    activeSourceType,
+    sourceCategory,
+    productType,
+    visibleContentPages,
+  ]);
+
   const buildPrintHTML = (data: CatalogPreviewData, forBrowser: boolean = false): string => {
     const cats = data.categories || [];
     const contentPages = data.contentPages || [];
     const indexData = data.index || [];
-    const showContent = sections.includes('content');
-    const showIndex = sections.includes('index');
+    const showContent = contentPages.length > 0;
+    const showIndex = includeIndexPages && indexData.length > 0;
     const contentCount = showContent ? contentPages.length : 0;
     const indexCount = showIndex && indexData.length > 0 ? 1 : 0;
     const categoryStartPage = 1 + contentCount + indexCount + 1;
@@ -470,30 +606,91 @@ export default function ExportCatalog() {
               <div className="bg-muted/20 px-6 py-4 border-b border-border/50 flex justify-between items-center">
                 <h3 className="font-semibold text-lg flex items-center gap-2"><Settings2 className="w-5 h-5 text-primary" /> Configuration</h3>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={selectAll} className="h-8 text-xs">Select All</Button>
-                  <Button variant="outline" size="sm" onClick={deselectAll} className="h-8 text-xs">Deselect All</Button>
+                  <Button variant="outline" size="sm" onClick={selectAllTypes} className="h-8 text-xs">Select All Categories</Button>
+                  <Button variant="outline" size="sm" onClick={clearTypes} className="h-8 text-xs">Clear Categories</Button>
                 </div>
               </div>
               <CardContent className="p-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-border/50">
                   <div className="p-6 space-y-4">
-                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">Catalog Components</h4>
-                    {[{ id: 'content', label: 'Content Pages' }, { id: 'index', label: 'Product Index' }].map(item => (
-                      <label key={item.id} className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${sections.includes(item.id) ? 'bg-primary/5 border-primary/30 ring-1 ring-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
-                        <Checkbox checked={sections.includes(item.id)} onCheckedChange={() => toggleSection(item.id)} className="mt-1" />
+                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">Content Pages</h4>
+                    <div className="space-y-2">
+                      {contentPresetOptions.map((option) => (
+                        <label
+                          key={option.key}
+                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                            activeContentPreset === option.key
+                              ? "bg-primary/5 border-primary/30 ring-1 ring-primary/30"
+                              : "bg-transparent border-border/50 hover:border-primary/50"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={activeContentPreset === option.key}
+                            onCheckedChange={() => applyContentPreset(option.key, option.pageIds)}
+                          />
+                          <span className="font-medium text-sm">{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <details className="group rounded-xl border border-border/50 bg-card">
+                      <summary className="list-none cursor-pointer p-4 flex items-center justify-between">
                         <div>
-                          <div className="font-medium">{item.label}</div>
-                          <div className="text-xs text-muted-foreground">Include formatted {item.id} section</div>
+                          <div className="font-medium text-sm">Content Page Checklist</div>
+                          <div className="text-xs text-muted-foreground">
+                            {selectedContentPageIds.length} selected of {visibleContentPages.length}
+                          </div>
                         </div>
-                      </label>
-                    ))}
+                        <span className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <div className="border-t border-border/50 p-3 space-y-2 max-h-72 overflow-auto">
+                        {visibleContentPages.length === 0 ? (
+                          <p className="text-xs text-muted-foreground px-2 py-1">
+                            No content pages available for this category context.
+                          </p>
+                        ) : (
+                          visibleContentPages.map((page) => (
+                            <label
+                              key={page.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                                selectedContentPageIds.includes(page.id)
+                                  ? "bg-primary/5 border-primary/30"
+                                  : "bg-transparent border-border/40 hover:border-primary/40"
+                              }`}
+                            >
+                              <Checkbox
+                                checked={selectedContentPageIds.includes(page.id)}
+                                onCheckedChange={() => toggleContentPage(page.id)}
+                                className="mt-0.5"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate">{page.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Category: {(page.category || "all").toUpperCase()} • Order: {page.sortOrder}
+                                </p>
+                              </div>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </details>
+
+                    <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${includeIndexPages ? 'bg-primary/5 border-primary/30 ring-1 ring-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
+                      <Checkbox checked={includeIndexPages} onCheckedChange={() => setIncludeIndexPages((prev) => !prev)} className="mt-1" />
+                      <div>
+                        <div className="font-medium">Include Index Pages</div>
+                        <div className="text-xs text-muted-foreground">Include formatted index section</div>
+                      </div>
+                    </label>
                   </div>
                   <div className="p-6 space-y-4">
-                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">Product Types</h4>
+                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">
+                      Categories ({isFromAllProducts ? "all preselected" : "source category preselected"})
+                    </h4>
                     <div className="grid grid-cols-1 gap-3">
                       {masterProductTypes?.map(type => (
-                        <label key={type.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${sections.includes(`type-${type.name}`) ? 'bg-primary/5 border-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
-                          <Checkbox checked={sections.includes(`type-${type.name}`)} onCheckedChange={() => toggleSection(`type-${type.name}`)} />
+                        <label key={type.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedTypeNames.includes(type.name) ? 'bg-primary/5 border-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
+                          <Checkbox checked={selectedTypeNames.includes(type.name)} onCheckedChange={() => toggleType(type.name)} />
                           <span className="font-medium text-sm">{type.name}</span>
                         </label>
                       ))}
@@ -529,7 +726,7 @@ export default function ExportCatalog() {
                     <div className="text-xs text-muted-foreground uppercase font-semibold">Content Pages</div>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
-                    <div className="text-2xl font-bold text-primary">{(previewData.categories?.length || 0) + (sections.includes('index') ? 1 : 0) + (sections.includes('content') ? 1 : 0) + 1}</div>
+                    <div className="text-2xl font-bold text-primary">{(previewData.categories?.length || 0) + (includeIndexPages ? 1 : 0) + ((previewData.contentPages?.length || 0) > 0 ? 1 : 0) + 1}</div>
                     <div className="text-xs text-muted-foreground uppercase font-semibold">Total Sheets</div>
                   </div>
                 </div>

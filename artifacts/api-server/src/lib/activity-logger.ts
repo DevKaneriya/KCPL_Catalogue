@@ -16,6 +16,8 @@ export async function logActivity(params: LogParams) {
       entityType: params.entityType,
       entityId: params.entityId,
       details: params.details,
+      // Some existing DBs have missing/defaultless created_at; set explicitly to keep logs ordered correctly.
+      createdAt: new Date(),
     });
   } catch (err) {
     console.error("Failed to log activity:", err);

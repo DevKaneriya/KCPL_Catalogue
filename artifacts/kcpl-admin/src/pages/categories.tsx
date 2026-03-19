@@ -19,7 +19,7 @@ export default function ProductTypes() {
   const createMutation = useCreateProductType();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { checkPermission } = useAuth();
+  const { checkPermission, token } = useAuth();
   
   const canManage = checkPermission("products:write");
 
@@ -48,10 +48,11 @@ export default function ProductTypes() {
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this product type? This may affect products and filters.")) {
       try {
+        if (!token) throw new Error("You are not logged in");
         const response = await fetch(`/api/masters/product-types/${id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
@@ -59,8 +60,8 @@ export default function ProductTypes() {
           toast({ title: "Product Type deleted" });
           queryClient.invalidateQueries({ queryKey: ["/api/masters/product-types"] });
         } else {
-          const err = await response.json();
-          throw new Error(err.message || 'Delete failed');
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.message || err?.error || 'Delete failed');
         }
       } catch (err: any) {
         toast({ title: "Delete failed", description: err.message, variant: "destructive" });

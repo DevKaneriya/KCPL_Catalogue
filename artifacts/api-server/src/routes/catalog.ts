@@ -77,6 +77,11 @@ router.get("/catalog/stats", async (_req, res) => {
         applicationCategory?: string; brandName?: string; productType?: string; 
       };
       
+      const selectedContentPageIds = sections
+        .filter((section) => section.startsWith("content-page-"))
+        .map((section) => Number(section.replace("content-page-", "")))
+        .filter((id) => Number.isFinite(id));
+
       // Extract product types from sections if not explicitly provided
       const extractedProductTypes = sections
         .filter(s => s.startsWith('type-'))
@@ -85,8 +90,16 @@ router.get("/catalog/stats", async (_req, res) => {
       console.log("DEBUG: Catalog preview request:", { sections, categoryIds, extractedProductTypes, applicationCategory, brandName });
 
       const contentPages = sections.includes("content")
-      ? await db.select().from(contentPagesTable).orderBy(asc(contentPagesTable.sortOrder))
-      : [];
+        ? await db
+            .select()
+            .from(contentPagesTable)
+            .where(
+              selectedContentPageIds.length > 0
+                ? inArray(contentPagesTable.id, selectedContentPageIds)
+                : undefined,
+            )
+            .orderBy(asc(contentPagesTable.sortOrder))
+        : [];
 
       // Logic: If we have specific product types selected, we generate pages BY TYPE.
       // If no product types are selected but categories are, we generate pages BY CATEGORY.

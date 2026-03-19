@@ -25,7 +25,7 @@ import { useAuth } from "@/contexts/auth-context";
 export default function Brands() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { checkPermission } = useAuth();
+  const { checkPermission, token } = useAuth();
   const canManage = checkPermission("products:write");
   
   const [newBrand, setNewBrand] = useState("");
@@ -70,10 +70,11 @@ export default function Brands() {
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this brand?")) {
       try {
+        if (!token) throw new Error("You are not logged in");
         const response = await fetch(`/api/masters/brands/${id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
@@ -81,8 +82,8 @@ export default function Brands() {
           toast({ title: "Brand deleted" });
           queryClient.invalidateQueries({ queryKey: ["/api/masters/brands"] });
         } else {
-          const err = await response.json();
-          throw new Error(err.message || 'Delete failed');
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.message || err?.error || 'Delete failed');
         }
       } catch (err: any) {
         toast({ title: "Delete failed", description: err.message, variant: "destructive" });
