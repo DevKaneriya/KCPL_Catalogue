@@ -15,6 +15,7 @@ import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, Settin
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 const normalizeKey = (value?: string | null) =>
   String(value || "")
@@ -224,7 +225,37 @@ export default function ExportCatalog() {
                     if (htmlText.includes('<div id="root"></div>')) {
                        throw new Error('Vite SPA Fallback - File truly missing');
                     }
-                    contents[page.id] = htmlText;
+                    
+                    // Add modern DOM parsing to clean up the HTML for printing
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+                    
+                    // Fix absolute image paths to be fully qualified with origin
+                    // This is essential for both the Blob-window print and html2canvas
+                    doc.querySelectorAll('img').forEach(img => {
+                      const src = img.getAttribute('src');
+                      if (src && src.startsWith('/')) {
+                        img.setAttribute('src', window.location.origin + src);
+                      }
+                    });
+
+                    // Extract and scope styles
+                    const styles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
+                    
+                    // If there's a specific container, use its content to avoid nesting <html> tags
+                    const container = doc.querySelector('.custom-page-container') || doc.body;
+                    
+                    // Wrap with localized styles and ensure max-width doesn't clip on A4
+                    contents[page.id] = `
+                      <style>
+                        ${styles}
+                        .custom-page-container { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; background: transparent !important; }
+                        .custom-content-wrapper img { max-width: 100%; height: auto; }
+                      </style>
+                      <div class="custom-content-wrapper">
+                        ${container.innerHTML}
+                      </div>
+                    `;
                   } else {
                     throw new Error('Not found');
                   }
@@ -285,7 +316,8 @@ export default function ExportCatalog() {
     visibleContentPages,
   ]);
 
-  const buildPrintHTML = (data: CatalogPreviewData, forBrowser: boolean = false): string => {
+  const buildPrintHTML = (data: CatalogPreviewData, options: { forBrowser?: boolean, includeScript?: boolean, bodyOnly?: boolean } = {}): string => {
+    const { forBrowser = false, includeScript = false, bodyOnly = false } = options;
     const cats = data.categories || [];
     const contentPages = data.contentPages || [];
     const indexData = data.index || [];
@@ -299,8 +331,8 @@ export default function ExportCatalog() {
     );
 
     const styles = `
-      @page { size: A4; margin: 18mm 14mm; }
-      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page { size: A4; margin: 0; }
+      * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
       body { font-family: 'Inter', Arial, sans-serif; font-size: 10pt; color: #1a1a1a; background: ${forBrowser ? '#f1f5f9' : 'white'}; }
       .sheet { 
         background: white; 
@@ -311,8 +343,9 @@ export default function ExportCatalog() {
         min-height: 297mm;
         position: relative;
         ${forBrowser ? 'border-radius: 8px;' : ''}
+        overflow: hidden;
       }
-      .page-break { page-break-after: always; }
+      .page-break { page-break-after: always; break-after: page; }
       
       /* Cover */
       .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 260mm; text-align: center; }
@@ -355,13 +388,7 @@ export default function ExportCatalog() {
       return window.location.origin + (url.startsWith('/') ? url : '/' + url);
     };
 
-    const html = `<!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>${styles}</style>
-    </head>
-    <body>
+    const mainBody = `
       <div class="sheet">
         <div class="cover">
           <div class="cover-brand">KCPL</div>
@@ -454,8 +481,26 @@ export default function ExportCatalog() {
           </div>
         </div>
       `).join('')}
+    `;
 
-      ${!forBrowser ? '<script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 1000); }</script>' : ''}
+    if (bodyOnly) {
+      return `
+        <style>${styles}</style>
+        <div class="catalog-content-root" style="background: white;">
+          ${mainBody}
+        </div>
+      `;
+    }
+
+    const html = `<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>${styles}</style>
+    </head>
+    <body style="margin: 0; padding: 0;">
+      ${mainBody}
+      ${includeScript ? '<script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 1000); }</script>' : ''}
     </body>
     </html>`;
 
@@ -466,7 +511,7 @@ export default function ExportCatalog() {
     if (!previewData) return;
     
     // 1. Trigger the browser print (opens in new tab with print dialog)
-    const html = buildPrintHTML(previewData, false);
+    const html = buildPrintHTML(previewData, { includeScript: true });
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const win = window.open(url, '_blank');
@@ -478,12 +523,12 @@ export default function ExportCatalog() {
       setIsDone(true);
     }
 
-    // 2. Direct PDF Download
+    // 2. Direct PDF Download (Improved Page-by-Page Rendering)
     try {
       setIsGenerating(true);
       toast({ 
         title: "Generating PDF...", 
-        description: "Your catalog is being prepared for download.",
+        description: "Rendering pages individually for best quality. This may take a moment.",
       });
 
       const doc = new jsPDF({
@@ -493,37 +538,57 @@ export default function ExportCatalog() {
         compress: true
       });
 
-      // Simple HTML to PDF conversion using the available container or building one
       const tempContainer = document.createElement('div');
       tempContainer.style.width = '210mm';
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.innerHTML = buildPrintHTML(previewData, true);
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-10000px';
+      tempContainer.style.top = '0';
+      tempContainer.style.zIndex = '-9999';
+      tempContainer.innerHTML = buildPrintHTML(previewData, { bodyOnly: true });
       document.body.appendChild(tempContainer);
 
-      await doc.html(tempContainer, {
-        callback: function (doc) {
-          doc.save(`KCPL_Catalog_${new Date().toISOString().split('T')[0]}.pdf`);
-          document.body.removeChild(tempContainer);
-          setIsGenerating(false);
-          toast({ title: "Download complete!" });
-        },
-        x: 0,
-        y: 0,
-        width: 210,
-        windowWidth: 800,
-        html2canvas: {
-          scale: 0.25, // Lower scale for better performance and smaller size
+      await document.fonts.ready;
+      // Wait for images to load
+      const images = tempContainer.getElementsByTagName('img');
+      await Promise.all(Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }));
+      
+      // Delay to ensure layout is settled
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const sheets = tempContainer.querySelectorAll('.sheet');
+      
+      for (let i = 0; i < sheets.length; i++) {
+        const sheet = sheets[i] as HTMLElement;
+        const canvas = await html2canvas(sheet, {
+          scale: 1.5, // High quality scale
           useCORS: true,
-          allowTaint: true,
+          allowTaint: false,
+          backgroundColor: '#ffffff',
           logging: false,
-          letterRendering: true
-        }
-      });
+          width: sheet.offsetWidth,
+          height: sheet.offsetHeight
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+        
+        if (i > 0) doc.addPage();
+        doc.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      }
+
+      doc.save(`KCPL_Catalog_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.removeChild(tempContainer);
+      setIsGenerating(false);
+      toast({ title: "Download complete!" });
     } catch (err: any) {
       console.error("PDF Generate Error:", err);
       setIsGenerating(false);
-      // We don't block the user since the print window likely still opened
+      toast({ title: "Export Failed", description: "The catalog was too large for your browser to process.", variant: "destructive" });
     }
   };
 
@@ -564,7 +629,7 @@ export default function ExportCatalog() {
           </div>
         </div>
         <div className="flex-1 overflow-auto p-12 flex justify-center bg-slate-200/40 relative pattern-dots">
-          <div className="max-w-4xl w-full bg-transparent shadow-2xl shadow-slate-400/30 rounded-sm overflow-visible transform-gpu" dangerouslySetInnerHTML={{ __html: buildPrintHTML(previewData, true) }} />
+          <div className="max-w-4xl w-full bg-transparent shadow-2xl shadow-slate-400/30 rounded-sm overflow-visible transform-gpu" dangerouslySetInnerHTML={{ __html: buildPrintHTML(previewData, { forBrowser: true, bodyOnly: true }) }} />
         </div>
       </div>
     );
