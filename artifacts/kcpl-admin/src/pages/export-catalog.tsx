@@ -94,18 +94,6 @@ export default function ExportCatalog() {
     [visibleContentPages],
   );
 
-  const contentPresetOptions = useMemo(() => [
-    {
-      key: "preset-all-pages",
-      label: "All Available Pages",
-      pageIds: allVisibleContentPageIds,
-    },
-    {
-      key: "preset-none",
-      label: "No Content Pages",
-      pageIds: [],
-    },
-  ], [allVisibleContentPageIds]);
 
   const getDefaultPageIdsForType = (typeName: string) =>
     visibleContentPages
@@ -291,6 +279,43 @@ export default function ExportCatalog() {
       }
     );
   };
+
+  const contentPresetOptions = useMemo(() => {
+    const options: Array<{ key: string; label: string; pageIds: number[] }> = [
+      { key: "preset-all-pages", label: "Select All Pages", pageIds: allVisibleContentPageIds },
+    ];
+
+    if (isFromAllProducts) {
+      for (const type of masterProductTypes || []) {
+        const pageIds = getDefaultPageIdsForType(type.name);
+        if (pageIds.length > 0) {
+          options.push({
+            key: `preset-default-${normalizeKey(type.name)}`,
+            label: `Select Default ${type.name} Pages`,
+            pageIds,
+          });
+        }
+      }
+    } else {
+      const sourceTypeName = activeSourceType?.name || sourceCategory || productType || "Category";
+      const pageIds = getDefaultPageIdsForType(sourceTypeName);
+      options.push({
+        key: `preset-default-${normalizeKey(sourceTypeName)}`,
+        label: `Select Default ${sourceTypeName} Pages`,
+        pageIds,
+      });
+    }
+
+    return options.filter((option) => option.pageIds.length > 0);
+  }, [
+    allVisibleContentPageIds,
+    isFromAllProducts,
+    masterProductTypes,
+    activeSourceType,
+    sourceCategory,
+    productType,
+    visibleContentPages,
+  ]);
 
   const buildPrintHTML = (data: CatalogPreviewData, options: { forBrowser?: boolean, includeScript?: boolean, bodyOnly?: boolean } = {}): string => {
     const { forBrowser = false, includeScript = false, bodyOnly = false } = options;
@@ -656,7 +681,18 @@ export default function ExportCatalog() {
                   <div className="p-6 space-y-4">
                     <h4 className="text-sm font-semibold uppercase text-muted-foreground">Content Pages</h4>
                     <div className="space-y-2">
-                      {contentPresetOptions.map((option: { key: string; label: string; pageIds: number[] }) => (
+                      {(useMemo(() => [
+                        {
+                          key: "preset-all-pages",
+                          label: "All Available Pages",
+                          pageIds: allVisibleContentPageIds,
+                        },
+                        {
+                          key: "preset-none",
+                          label: "No Content Pages",
+                          pageIds: [],
+                        },
+                      ], [allVisibleContentPageIds])).map((option: { key: string; label: string; pageIds: number[] }) => (
                         <label
                           key={option.key}
                           className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
