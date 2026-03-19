@@ -163,7 +163,7 @@ export default function ApplicationCategories() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="w-[80px] pl-6">ID</TableHead>
+                    <TableHead className="w-[80px] pl-6">No.</TableHead>
                     <TableHead>Category Name</TableHead>
                     <TableHead>Product Type</TableHead>
                     <TableHead className="text-right pr-6">Actions</TableHead>
@@ -183,9 +183,9 @@ export default function ApplicationCategories() {
                         No entries found.
                       </TableCell>
                     </TableRow>
-                  ) : filtered.map((item: any) => (
+                  ) : filtered.map((item: any, index: number) => (
                     <TableRow key={item.id} className="group hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-mono text-xs text-muted-foreground pl-6">#{item.id}</TableCell>
+                      <TableCell className="font-medium text-muted-foreground pl-6">{index + 1}</TableCell>
                       <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                       <TableCell>
                           <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-bold">

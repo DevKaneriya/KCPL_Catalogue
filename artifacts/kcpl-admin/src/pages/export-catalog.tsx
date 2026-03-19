@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ type CatalogPreviewData = {
   index?: any[];
   sections?: string[];
 };
-import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, Settings2, Printer, ArrowLeft } from "lucide-react";
+import { Download, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Eye, Settings2, Printer, ArrowLeft, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
@@ -32,6 +32,68 @@ const matchesCategoryValue = (value?: string | null, target?: string | null) => 
   if (!left || !right) return false;
   return left === right || canonicalKey(left) === canonicalKey(right);
 };
+
+type SectionCardProps = {
+  title: string;
+  description?: string;
+  icon?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+};
+
+function SectionCard({ title, description, icon, actions, children }: SectionCardProps) {
+  return (
+    <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/5">
+      <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 px-6 py-5">
+        <div className="flex items-start gap-3">
+          {icon ? (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600">
+              {icon}
+            </div>
+          ) : null}
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+            {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+          </div>
+        </div>
+        {actions}
+      </div>
+      <CardContent className="space-y-5 p-6">{children}</CardContent>
+    </Card>
+  );
+}
+
+type SelectionCardProps = {
+  checked: boolean;
+  title: string;
+  description?: string;
+  onCheckedChange: () => void;
+  className?: string;
+};
+
+function SelectionCard({
+  checked,
+  title,
+  description,
+  onCheckedChange,
+  className = "",
+}: SelectionCardProps) {
+  return (
+    <label
+      className={`group flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-all duration-200 ease-out ${
+        checked
+          ? "border-primary/40 bg-primary/5 shadow-sm shadow-primary/5"
+          : "border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+      } ${className}`}
+    >
+      <Checkbox checked={checked} onCheckedChange={onCheckedChange} className="mt-0.5 rounded-md" />
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-slate-900">{title}</p>
+        {description ? <p className="mt-1 text-xs text-slate-500">{description}</p> : null}
+      </div>
+    </label>
+  );
+}
 
 export default function ExportCatalog() {
   const { data: contentPages } = useListContentPages();
@@ -163,6 +225,7 @@ export default function ExportCatalog() {
   const [isDone, setIsDone] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isContentChecklistOpen, setIsContentChecklistOpen] = useState(false);
   const PRODUCTS_PER_PAGE = 6;
   const INDEX_ROWS_PER_PAGE = 30;
 
@@ -264,12 +327,6 @@ export default function ExportCatalog() {
     setActiveContentPreset(presetKey);
     setSelectedContentPageIds(Array.from(new Set(pageIds)));
   };
-
-  const selectAllTypes = () => {
-    setSelectedTypeNames(masterProductTypes?.map((type) => type.name) || []);
-  };
-
-  const clearTypes = () => setSelectedTypeNames([]);
 
   const goToPreview = () => {
     if (selectedTypeNames.length === 0) {
@@ -894,6 +951,7 @@ export default function ExportCatalog() {
     }
 
     // 2. Direct PDF Download (Improved Page-by-Page Rendering)
+    let renderFrame: HTMLIFrameElement | null = null;
     try {
       setIsGenerating(true);
       toast({ 
@@ -908,18 +966,50 @@ export default function ExportCatalog() {
         compress: true
       });
 
-      const tempContainer = document.createElement('div');
-      tempContainer.style.width = '210mm';
-      tempContainer.style.position = 'fixed';
-      tempContainer.style.left = '-10000px';
-      tempContainer.style.top = '0';
-      tempContainer.style.zIndex = '-9999';
-      tempContainer.innerHTML = buildPrintHTML(previewData, { bodyOnly: true });
-      document.body.appendChild(tempContainer);
+      // Render print HTML in an isolated iframe so global print styles never leak into the app UI.
+      renderFrame = document.createElement('iframe');
+      renderFrame.setAttribute('aria-hidden', 'true');
+      renderFrame.style.width = '210mm';
+      renderFrame.style.height = '297mm';
+      renderFrame.style.position = 'fixed';
+      renderFrame.style.left = '-10000px';
+      renderFrame.style.top = '0';
+      renderFrame.style.border = '0';
+      renderFrame.style.opacity = '0';
+      renderFrame.style.pointerEvents = 'none';
+      renderFrame.style.zIndex = '-1';
+      document.body.appendChild(renderFrame);
 
-      await document.fonts.ready;
+      const frameDoc = renderFrame.contentDocument;
+      if (!frameDoc) throw new Error("Failed to initialize PDF render frame");
+
+      frameDoc.open();
+      frameDoc.write(buildPrintHTML(previewData, { bodyOnly: false }));
+      frameDoc.close();
+
+      await new Promise<void>((resolve) => {
+        let resolved = false;
+        const finish = () => {
+          if (resolved) return;
+          resolved = true;
+          resolve();
+        };
+
+        if (frameDoc.readyState === "complete") {
+          finish();
+          return;
+        }
+
+        renderFrame?.addEventListener("load", finish, { once: true });
+        setTimeout(finish, 300);
+      });
+
+      if (frameDoc.fonts?.ready) {
+        await frameDoc.fonts.ready;
+      }
+
       // Wait for images to load
-      const images = tempContainer.getElementsByTagName('img');
+      const images = frameDoc.getElementsByTagName('img');
       await Promise.all(Array.from(images).map(img => {
         if (img.complete) return Promise.resolve();
         return new Promise(resolve => {
@@ -931,7 +1021,7 @@ export default function ExportCatalog() {
       // Delay to ensure layout is settled
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const sheets = tempContainer.querySelectorAll('.sheet');
+      const sheets = frameDoc.querySelectorAll('.sheet');
       
       for (let i = 0; i < sheets.length; i++) {
         const sheet = sheets[i] as HTMLElement;
@@ -962,16 +1052,23 @@ export default function ExportCatalog() {
         console.warn("Export activity log failed", err);
       }
 
-      document.body.removeChild(tempContainer);
-      setIsGenerating(false);
       toast({ title: "Download complete!" });
     } catch (err: any) {
       console.error("PDF Generate Error:", err);
-      setIsGenerating(false);
       toast({ title: "Export Failed", description: "The catalog was too large for your browser to process.", variant: "destructive" });
+    } finally {
+      if (renderFrame?.parentNode) {
+        renderFrame.parentNode.removeChild(renderFrame);
+      }
+      setIsGenerating(false);
     }
   };
 
+  const stepItems = [
+    { id: 1, label: "Selection", helper: "Choose content and categories" },
+    { id: 2, label: "Preview", helper: "Review compiled catalog" },
+    { id: 3, label: "Generate", helper: "Print or download PDF" },
+  ];
   if (showLivePreview && previewData) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col">
@@ -1017,137 +1114,194 @@ export default function ExportCatalog() {
 
   return (
     <Layout>
-      <div className="mb-8 max-w-5xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground flex items-center gap-3">
-          <Download className="w-8 h-8 text-primary" />
-          Export Engine
-        </h1>
-        <p className="text-muted-foreground mt-1">Compile and generate full product catalogs for print or digital distribution.</p>
+      <div className="mx-auto mb-8 max-w-6xl">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5 md:p-7">
+          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900 md:text-4xl">
+            <Download className="h-8 w-8 text-primary" />
+            Export Engine
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 md:text-base">
+            Compile and generate full product catalogs for print or digital distribution.
+          </p>
 
-        {/* Stepper */}
-        <div className="flex items-center justify-between mt-8 relative">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-border/50 -z-10" />
-          {[1, 2, 3].map((num) => (
-            <div key={num} className={`flex flex-col items-center gap-2 bg-background px-4 ${step === num ? 'opacity-100' : 'opacity-50'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-colors ${
-                step > num ? 'bg-primary border-primary text-primary-foreground' :
-                step === num ? 'border-primary text-primary bg-primary/10' :
-                'border-border text-muted-foreground bg-muted'
-              }`}>
-                {step > num ? <CheckCircle2 className="w-5 h-5" /> : num}
-              </div>
-              <span className="text-xs font-semibold uppercase tracking-wider hidden sm:block">
-                {num === 1 ? 'Selection' : num === 2 ? 'Preview' : 'Generate'}
-              </span>
-            </div>
-          ))}
+          <div className="mt-6 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 md:p-4">
+            <ol className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+              {stepItems.map((item) => {
+                const isCompleted = step > item.id;
+                const isActive = step === item.id;
+                return (
+                  <li
+                    key={item.id}
+                    className={`rounded-xl border px-3 py-3 transition-all duration-200 ease-out md:px-4 ${
+                      isCompleted
+                        ? "border-primary/30 bg-primary/5"
+                        : isActive
+                          ? "border-primary/40 bg-white shadow-sm shadow-primary/10"
+                          : "border-slate-200 bg-white/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold transition-colors ${
+                          isCompleted
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : isActive
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-slate-300 bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : item.id}
+                      </div>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium ${
+                            isActive || isCompleted ? "text-slate-900" : "text-slate-600"
+                          }`}
+                        >
+                          {item.label}
+                        </p>
+                        <p className="text-xs text-slate-500">{item.helper}</p>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto">
+      <div className="mx-auto max-w-6xl">
         {step === 1 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <Card className="border-border/50 shadow-sm rounded-xl overflow-hidden">
-              <div className="bg-muted/20 px-6 py-4 border-b border-border/50 flex justify-between items-center">
-                <h3 className="font-semibold text-lg flex items-center gap-2"><Settings2 className="w-5 h-5 text-primary" /> Configuration</h3>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={selectAllTypes} className="h-8 text-xs">Select All Categories</Button>
-                  <Button variant="outline" size="sm" onClick={clearTypes} className="h-8 text-xs">Clear Categories</Button>
-                </div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white px-6 py-5 shadow-sm shadow-slate-900/5">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                  <Settings2 className="h-5 w-5 text-primary" />
+                  Configuration
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Configure content pages and product categories before generating preview.
+                </p>
               </div>
-              <CardContent className="p-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-border/50">
-                  <div className="p-6 space-y-4">
-                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">Content Pages</h4>
-                    <div className="space-y-2">
-                      {contentPresetOptions.map((option) => (
-                        <label
-                          key={option.key}
-                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                            activeContentPreset === option.key
-                              ? "bg-primary/5 border-primary/30 ring-1 ring-primary/30"
-                              : "bg-transparent border-border/50 hover:border-primary/50"
-                          }`}
-                        >
-                          <Checkbox
-                            checked={activeContentPreset === option.key}
-                            onCheckedChange={() => applyContentPreset(option.key, option.pageIds)}
-                          />
-                          <span className="font-medium text-sm">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
+            </div>
 
-                    <details className="group rounded-xl border border-border/50 bg-card">
-                      <summary className="list-none cursor-pointer p-4 flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-sm">Content Page Checklist</div>
-                          <div className="text-xs text-muted-foreground">
-                            {selectedContentPageIds.length} selected of {visibleContentPages.length}
-                          </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
-                      </summary>
-                      <div className="border-t border-border/50 p-3 space-y-2 max-h-72 overflow-auto">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <SectionCard
+                title="Content Pages"
+                description="Choose default page sets and fine-tune individual pages."
+                icon={<Settings2 className="h-4 w-4" />}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Default Pages</p>
+                    <p className="text-xs text-slate-500">
+                      {selectedContentPageIds.length} of {visibleContentPages.length} selected
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {contentPresetOptions.map((option) => (
+                      <SelectionCard
+                        key={option.key}
+                        checked={activeContentPreset === option.key}
+                        onCheckedChange={() => applyContentPreset(option.key, option.pageIds)}
+                        title={option.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px w-full bg-slate-200/80" />
+
+                <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/40">
+                  <button
+                    type="button"
+                    onClick={() => setIsContentChecklistOpen((prev) => !prev)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors duration-200 hover:bg-slate-100/70"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Content Page Checklist</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {selectedContentPageIds.length} selected of {visibleContentPages.length}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${
+                        isContentChecklistOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      height: isContentChecklistOpen ? "auto" : 0,
+                      opacity: isContentChecklistOpen ? 1 : 0,
+                    }}
+                    transition={{ duration: 0.22, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="border-t border-slate-200/80 bg-white p-3">
+                      <div className="max-h-80 space-y-2 overflow-y-auto pr-1.5 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300/80 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
                         {visibleContentPages.length === 0 ? (
-                          <p className="text-xs text-muted-foreground px-2 py-1">
+                          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-xs text-slate-500">
                             No content pages available for this category context.
                           </p>
                         ) : (
                           visibleContentPages.map((page) => (
-                            <label
+                            <SelectionCard
                               key={page.id}
-                              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                selectedContentPageIds.includes(page.id)
-                                  ? "bg-primary/5 border-primary/30"
-                                  : "bg-transparent border-border/40 hover:border-primary/40"
-                              }`}
-                            >
-                              <Checkbox
-                                checked={selectedContentPageIds.includes(page.id)}
-                                onCheckedChange={() => toggleContentPage(page.id)}
-                                className="mt-0.5"
-                              />
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate">{page.title}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Category: {(page.category || "all").toUpperCase()} • Order: {page.sortOrder}
-                                </p>
-                              </div>
-                            </label>
+                              checked={selectedContentPageIds.includes(page.id)}
+                              onCheckedChange={() => toggleContentPage(page.id)}
+                              title={page.title}
+                              description={`Category: ${(page.category || "all").toUpperCase()} | Order: ${page.sortOrder}`}
+                            />
                           ))
                         )}
                       </div>
-                    </details>
-
-                    <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${includeIndexPages ? 'bg-primary/5 border-primary/30 ring-1 ring-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
-                      <Checkbox checked={includeIndexPages} onCheckedChange={() => setIncludeIndexPages((prev) => !prev)} className="mt-1" />
-                      <div>
-                        <div className="font-medium">Include Index Pages</div>
-                        <div className="text-xs text-muted-foreground">Include formatted index section</div>
-                      </div>
-                    </label>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <h4 className="text-sm font-semibold uppercase text-muted-foreground">
-                      Categories ({isFromAllProducts ? "all preselected" : "source category preselected"})
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      {masterProductTypes?.map(type => (
-                        <label key={type.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedTypeNames.includes(type.name) ? 'bg-primary/5 border-primary/30' : 'bg-transparent border-border/50 hover:border-primary/50'}`}>
-                          <Checkbox checked={selectedTypeNames.includes(type.name)} onCheckedChange={() => toggleType(type.name)} />
-                          <span className="font-medium text-sm">{type.name}</span>
-                        </label>
-                      ))}
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
-              </CardContent>
-            </Card>
-            <div className="flex justify-end">
-              <Button size="lg" className="shadow-xl" onClick={goToPreview} disabled={previewMutation.isPending}>
-                {previewMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Generate Preview <ChevronRight className="w-4 h-4 ml-2" />
+
+                <div className="h-px w-full bg-slate-200/80" />
+
+                <SelectionCard
+                  checked={includeIndexPages}
+                  onCheckedChange={() => setIncludeIndexPages((prev) => !prev)}
+                  title="Include Index Pages"
+                  description="Include formatted index and detail listing pages."
+                />
+              </SectionCard>
+
+              <SectionCard
+                title="Categories"
+                description="Select one or more product categories to include in this catalog."
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {isFromAllProducts ? "All categories available" : "Source category preselected"}
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  {masterProductTypes?.map((type) => (
+                    <SelectionCard
+                      key={type.id}
+                      checked={selectedTypeNames.includes(type.name)}
+                      onCheckedChange={() => toggleType(type.name)}
+                      title={type.name}
+                    />
+                  ))}
+                </div>
+              </SectionCard>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                size="lg"
+                className="h-11 rounded-xl px-6 font-medium shadow-md shadow-primary/20 transition-all duration-200 hover:shadow-lg"
+                onClick={goToPreview}
+                disabled={previewMutation.isPending}
+              >
+                {previewMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Generate Preview <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </motion.div>
@@ -1216,3 +1370,4 @@ export default function ExportCatalog() {
     </Layout>
   );
 }
+

@@ -207,7 +207,7 @@ export default function Roles() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {roles?.map((role) => (
-            <Card key={role.id} className="border-border/50 hover:shadow-md transition-shadow">
+            <Card key={role.id} className="h-full border-border/50 hover:shadow-md transition-shadow flex flex-col">
               <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
                 <div className="flex justify-between items-start">
                   <div>
@@ -228,7 +228,7 @@ export default function Roles() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-4 pb-4">
+              <CardContent className="pt-4 pb-4 flex flex-1 flex-col">
                 <div className="mb-4">
                   <div className="text-sm font-medium text-muted-foreground mb-2">Permissions</div>
                   <div className="flex flex-wrap gap-2">
@@ -243,7 +243,7 @@ export default function Roles() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4 border-t border-border/50">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4 border-t border-border/50 mt-auto">
                   <Users className="w-4 h-4" />
                   <span>Assigned to multiple users</span>
                 </div>

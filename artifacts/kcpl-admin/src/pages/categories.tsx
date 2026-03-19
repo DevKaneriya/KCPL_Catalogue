@@ -128,7 +128,7 @@ export default function ProductTypes() {
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="py-4 pl-6 w-[100px]">ID</TableHead>
+                <TableHead className="py-4 pl-6 w-[100px]">No.</TableHead>
                 <TableHead className="py-4">Type Name</TableHead>
                 <TableHead className="py-4">Created</TableHead>
                 <TableHead className="text-right py-4 pr-6">Actions</TableHead>
@@ -150,10 +150,10 @@ export default function ProductTypes() {
                   </TableCell>
                 </TableRow>
               ) : (
-                productTypes?.map((type) => (
+                productTypes?.map((type, index) => (
                   <TableRow key={type.id} className="group hover:bg-muted/20 transition-colors">
-                    <TableCell className="pl-6 py-4 font-mono text-xs text-muted-foreground">
-                      #{type.id}
+                    <TableCell className="pl-6 py-4 font-medium text-muted-foreground">
+                      {index + 1}
                     </TableCell>
                     <TableCell className="font-medium py-4">
                       <div className="text-base">{type.name}</div>

@@ -351,15 +351,15 @@ function ListSimple({ title, items, isLoading, search, onSearch }: any) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
+              <TableHead className="w-[80px]">No.</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Created At</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <LoadingRow /> : items.length === 0 ? <EmptyRow /> : items.map((item: any) => (
+            {isLoading ? <LoadingRow /> : items.length === 0 ? <EmptyRow /> : items.map((item: any, index: number) => (
               <TableRow key={item.id}>
-                <TableCell className="font-mono text-xs text-muted-foreground">{item.id}</TableCell>
+                <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                 <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
               </TableRow>
@@ -407,15 +407,15 @@ function ListFull({ title, items, isLoading, parents, filterValue, onFilterChang
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
+              <TableHead className="w-[80px]">No.</TableHead>
               <TableHead>Category Name</TableHead>
               <TableHead>Product Type</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <LoadingRow colSpan={3} /> : filtered.length === 0 ? <EmptyRow colSpan={3} /> : filtered.map((item: any) => (
+            {isLoading ? <LoadingRow colSpan={3} /> : filtered.length === 0 ? <EmptyRow colSpan={3} /> : filtered.map((item: any, index: number) => (
               <TableRow key={item.id}>
-                <TableCell className="font-mono text-xs text-muted-foreground">{item.id}</TableCell>
+                <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                 <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                 <TableCell>
                     <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-bold">
@@ -453,15 +453,15 @@ function BrandsList({ brands, isLoading, types, cats, typeFilter, catFilter }: a
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[80px]">ID</TableHead>
+                            <TableHead className="w-[80px]">No.</TableHead>
                             <TableHead>Brand Name</TableHead>
                             <TableHead>Hierarchy (Type &gt; Category)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? <LoadingRow colSpan={3} /> : filtered.length === 0 ? <EmptyRow colSpan={3} /> : filtered.map((item: any) => (
+                        {isLoading ? <LoadingRow colSpan={3} /> : filtered.length === 0 ? <EmptyRow colSpan={3} /> : filtered.map((item: any, index: number) => (
                             <TableRow key={item.id}>
-                                <TableCell className="font-mono text-xs text-muted-foreground">{item.id}</TableCell>
+                                <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                                 <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-1.5 text-[10px] font-bold">

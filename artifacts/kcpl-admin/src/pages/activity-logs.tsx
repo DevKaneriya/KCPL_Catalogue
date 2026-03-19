@@ -5,14 +5,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { useListActivityLogs } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { ActivitySquare, Loader2 } from "lucide-react";
+import { ActivitySquare, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function ActivityLogs() {
   const [page, setPage] = useState(1);
-  const limit = 50;
+  const limit = 15;
 
   const { data, isLoading, error } = useListActivityLogs({ page, limit });
+  const totalLogs = data?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(totalLogs / limit));
+  const from = Math.min((page - 1) * limit + 1, totalLogs);
+  const to = Math.min(page * limit, totalLogs);
 
   const getActionColor = (action: string) => {
     switch(action.toLowerCase()) {
@@ -102,23 +106,35 @@ export default function ActivityLogs() {
             </Table>
           </div>
           
-          {data && Math.ceil(data.total / limit) > 1 && (
-            <div className="p-4 border-t border-border/50 flex justify-between items-center bg-muted/20">
-              <Button 
-                variant="outline" 
-                disabled={page === 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <span className="text-sm font-medium">Page {page} of {Math.ceil(data.total / limit)}</span>
-              <Button 
-                variant="outline" 
-                disabled={page === Math.ceil(data.total / limit)}
-                onClick={() => setPage(p => p + 1)}
-              >
-                Next
-              </Button>
+          {data && totalLogs > 0 && (
+            <div className="p-4 border-t border-border/50 bg-muted/10 flex items-center justify-center sm:justify-end">
+              <div className="inline-flex items-center gap-3">
+                <span className="text-base font-medium tabular-nums">
+                  {from} - {to} of {totalLogs}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:text-muted-foreground/40"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:text-muted-foreground/40"
+                    disabled={page === totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

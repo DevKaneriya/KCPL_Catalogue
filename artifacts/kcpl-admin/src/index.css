@@ -161,6 +161,13 @@
     @apply border-border;
   }
 
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
     transition: background-color 0.2s ease, color 0.2s ease;
