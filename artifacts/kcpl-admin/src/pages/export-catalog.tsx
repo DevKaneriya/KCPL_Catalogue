@@ -163,7 +163,7 @@ export default function ExportCatalog() {
   const [isDone, setIsDone] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const PRODUCTS_PER_PAGE = 12;
+  const PRODUCTS_PER_PAGE = 6;
   const INDEX_ROWS_PER_PAGE = 30;
 
   const totalSheets = useMemo(() => {
@@ -176,27 +176,27 @@ export default function ExportCatalog() {
     let detailSheets = 0;
     if (includeIndexPages) {
         let totalTOCRows = 0;
-        const brandsOverall = new Set<string>();
-        const totalProducts = cats.reduce((acc, c) => acc + (c.products?.length || 0), 0);
-        
         cats.forEach(cat => {
-          const brands = new Set(cat.products?.map((p: any) => p.brandName || "Other"));
-          totalTOCRows += (1 + brands.size);
-          brands.forEach((b: any) => brandsOverall.add(b.toUpperCase()));
+          totalTOCRows += 1; // Product Type
+          const appCats = new Set(cat.products?.map((p: any) => p.applicationCategory || "General"));
+          totalTOCRows += appCats.size; // App Categories
+          const brandEntries = new Set();
+          cat.products?.forEach((p: any) => brandEntries.add(`${p.applicationCategory}-${p.brandName}`));
+          totalTOCRows += brandEntries.size; // Brands within app categories
         });
-        
         indexSheets = Math.max(1, Math.ceil(totalTOCRows / 24));
         
-        let totalDetailRowsCount = 0;
+        let totalDetailSheetsCount = 0;
         cats.forEach(cat => {
-            totalDetailRowsCount += 1; // Type header
+            let rowsInType = 1; // Type header
             const appCats = new Set(cat.products?.map((p: any) => p.applicationCategory || "General"));
-            totalDetailRowsCount += appCats.size;
+            rowsInType += appCats.size;
             const brandsByCat = new Set(cat.products?.map((p: any) => p.brandName || "Other"));
-            totalDetailRowsCount += (brandsByCat.size * 2); // Header row + Badge row
-            totalDetailRowsCount += (cat.products?.length || 0);
+            rowsInType += (brandsByCat.size * 2);
+            rowsInType += (cat.products?.length || 0);
+            totalDetailSheetsCount += Math.max(1, Math.ceil(rowsInType / 15));
         });
-        detailSheets = Math.max(1, Math.ceil(totalDetailRowsCount / 15));
+        detailSheets = totalDetailSheetsCount;
     }
     
     return 2 + contentCount + indexSheets + detailSheets + catSheets;
@@ -403,9 +403,9 @@ export default function ExportCatalog() {
         background: white; 
         box-shadow: ${forBrowser ? '0 10px 15px -3px rgb(0 0 0 / 0.1)' : 'none'}; 
         margin: ${forBrowser ? '20px auto' : '0'};
-        padding: 18mm 14mm;
+        padding: 15mm 12mm 25mm 12mm;
         width: 210mm;
-        min-height: 297mm;
+        height: 297mm;
         position: relative;
         ${forBrowser ? 'border-radius: 8px;' : ''}
         overflow: hidden;
@@ -414,62 +414,110 @@ export default function ExportCatalog() {
       
       /* Cover */
       .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 260mm; text-align: center; }
-      .cover-brand { font-size: 60pt; font-weight: 900; color: #0d9488; letter-spacing: -3px; }
-      .cover-line { width: 80px; height: 5px; background: #0d9488; margin: 16px auto; }
-      .cover-title { font-size: 22pt; font-weight: 700; color: #1a1a1a; }
-      .cover-sub { font-size: 12pt; color: #64748b; margin-top: 8px; }
-      .cover-year { font-size: 14pt; color: #0d9488; font-weight: 700; margin-top: 24px; }
-
+      .cover-brand { font-size: 60pt; font-weight: 900; color: #006eb3; letter-spacing: -3px; }
+      .cover-line { width: 80px; height: 5px; background: #006eb3; margin: 16px auto; }
+      .cover-title { font-size: 22pt; font-weight: 700; color: #1e293b; }
+      .cover-sub { font-size: 12pt; color: #475569; margin-top: 8px; }
+      .cover-year { font-size: 14pt; color: #006eb3; font-weight: 700; margin-top: 24px; }
+ 
       /* Sections */
-      .section-title { font-size: 18pt; font-weight: 700; color: #0d9488; border-bottom: 3px solid #0d9488; padding-bottom: 4mm; margin-bottom: 8mm; }
+      .section-title { font-size: 18pt; font-weight: 700; color: #006eb3; border-bottom: 3px solid #006eb3; padding-bottom: 4mm; margin-bottom: 4mm; }
       .content-item { margin-bottom: 10mm; }
-      .content-item h3 { font-size: 16pt; margin-bottom: 4mm; color: #1a1a1a; }
+      .content-item h3 { font-size: 16pt; margin-bottom: 4mm; color: #1e293b; }
       .content-img { width: 100%; max-height: 100mm; object-fit: cover; border-radius: 8px; margin-bottom: 6mm; }
-      .content-html { line-height: 1.6; color: #334155; }
-
+      .content-html { line-height: 1.6; color: #475569; }
+ 
       /* Index Table */
       .index-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-      .index-table th { background: #0d9488; color: white; padding: 8px; text-align: left; }
+      .index-table th { background: #006eb3; color: white; padding: 8px; text-align: left; }
       .index-table td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
       .index-table tr:nth-child(even) td { background: #f8fafc; }
       .index-table th.page-col, .index-table td.page-col { width: 70px; text-align: center; }
+ 
+      /* Category Pages Modern UI */
+      .cat-section { margin-top: 2mm; text-align: center; }
+      .series-title { font-size: 14pt; color: #006eb3; font-weight: 800; letter-spacing: 1px; margin-bottom: 2mm; text-transform: uppercase; }
+      .brand-banner-container { display: flex; justify-content: center; margin-bottom: 4mm; }
+      .brand-banner { 
+        background: #006eb3; 
+        color: white; 
+        padding: 5px 40px; 
+        font-weight: 800; 
+        font-size: 10pt; 
+        position: relative; 
+        clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        text-transform: uppercase;
+      }
 
-      /* Category Pages */
-      .cat-section { margin-top: 5mm; }
-      .product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-      .product-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; break-inside: avoid; }
-      .product-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; background: #f8fafc; margin-bottom: 8px; }
-      .product-placeholder { width: 100%; aspect-ratio: 1; background: #f1f5f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 8pt; margin-bottom: 8px; }
-      .product-name { font-size: 9pt; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
-      .product-sku { font-size: 8pt; color: #0d9488; font-weight: 600; }
-      .product-info { font-size: 7.5pt; color: #64748b; margin-top: 2px; }
-
-      .footer { position: absolute; bottom: 10mm; left: 14mm; right: 14mm; font-size: 8pt; color: #94a3b8; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 3mm; }
-      .page-number-box { background: #006eb3; color: white; padding: 2px 10px; border-radius: 4px; font-weight: 700; font-size: 9pt; justify-self: center; }
-      
+      .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10mm 12mm; padding: 0 5mm; margin-top: 2mm; }
+      .product-card { 
+        position: relative; 
+        border: 1.5px solid #006eb3; 
+        border-radius: 12px; 
+        padding-top: 3mm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        height: 64mm;
+        background: white;
+        overflow: visible;
+      }
+      .kcpl-code-label { 
+        position: absolute; 
+        left: -1mm; 
+        top: 35%; 
+        background: #006eb3; 
+        color: white; 
+        padding: 3px 10px; 
+        font-weight: 900; 
+        font-size: 11pt; 
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+      }
+      .product-img-box { width: 90%; height: 38mm; display: flex; align-items: center; justify-content: center; }
+      .product-img { max-width: 100%; max-height: 80%; object-fit: contain; }
+      .product-detail-footer { 
+        width: 100%; 
+        background: #006eb3; 
+        color: white; 
+        padding: 18px; 
+        border-radius: 0 0 10px 10px; 
+        text-align: left; 
+        font-size: 6.8pt;
+        line-height: 1.3;
+      }
+      .product-detail-footer div { overflow: hidden; white-space: nowrap; text-overflow: ellipsis;  }
+      .detail-label { font-weight: 900; opacity: 0.9; margin-right: 4px; }
+ 
       /* TOC Styles */
-      .toc-header { background: #006eb3; color: white; padding: 12px 20px; font-weight: 800; font-size: 11pt; text-transform: uppercase; display: flex; justify-content: space-between; border-radius: 4px; margin-bottom: 8mm; letter-spacing: 1px; }
-      .toc-cat-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6mm; margin-bottom: 4mm; color: #006eb3; font-weight: 800; font-size: 14pt; text-transform: uppercase; }
+      .toc-cat-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 5mm; margin-bottom: 3mm; color: #006eb3; font-weight: 800; font-size: 13pt; text-transform: uppercase; }
       .toc-cat-dots { flex: 1; border-bottom: 2px dotted #cbd5e1; margin: 0 12px; position: relative; top: -5px; }
-      .toc-brand-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3.5mm; padding-left: 6mm; color: #475569; font-size: 11pt; font-weight: 700; text-transform: uppercase; }
-      .toc-brand-dots { flex: 1; border-bottom: 1.5px dotted #e2e8f0; margin: 0 10px; position: relative; top: -5px; }
-      .toc-page { color: #006eb3; font-weight: 800; min-width: 60px; text-align: right; font-family: 'Courier New', monospace; font-size: 12pt; }
+      
+      .toc-app-row { display: flex; justify-content: space-between; align-items: baseline; margin-left: 10px; margin-top: 3mm; margin-bottom: 2mm; color: #475569; font-weight: 700; font-size: 11pt; text-transform: uppercase; }
+      .toc-app-dots { flex: 1; border-bottom: 1.5px dotted #e2e8f0; margin: 0 10px; position: relative; top: -5px; }
 
-      /* Detail Index Styles (Teal SKU List) */
+      .toc-brand-row { display: flex; justify-content: space-between; align-items: baseline; margin-left: 20px; margin-bottom: 2mm; color: #475569; font-size: 10.5pt; font-weight: 700; text-transform: uppercase; }
+      .toc-brand-dots { flex: 1; border-bottom: 1px dotted #e2e8f0; margin: 0 10px; position: relative; top: -5px; }
+      
+      .toc-page { color: #006eb3; font-weight: 800; min-width: 60px; text-align: right; font-family: 'Courier New', monospace; font-size: 11pt; }
+
+      /* Detail Index Styles (Blue SKU List) */
       .detail-table-teal { width: 100%; border-collapse: collapse; margin-bottom: 8mm; }
-      .detail-table-teal th { background: #0d9488; color: white; padding: 10px 10px; text-align: left; font-size: 8.5pt; text-transform: uppercase; border-right: 1px solid #14b8a6; }
+      .detail-table-teal th { background: #006eb3; color: white; padding: 10px 10px; text-align: left; font-size: 8.5pt; text-transform: uppercase; border-right: 1px solid #3b82f6; }
       .detail-table-teal td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 8.5pt; color: #334155; vertical-align: middle; }
-      .detail-table-teal .page-col { text-align: center; width: 70px; font-weight: 700; color: #0d9488; border-left: 1px solid #f1f5f9; }
-      .detail-table-teal .adaptable-col { font-weight: 700; color: #0f172a; }
+      .detail-table-teal .page-col { text-align: center; width: 70px; font-weight: 700; color: #006eb3; border-left: 1px solid #f1f5f9; }
+      .detail-table-teal .adaptable-col { font-weight: 700; color: #1e293b; }
       .detail-table-teal tr:hover td { background: #f8fafc; }
-
+ 
       .detail-type-banner { background: #006eb3; color: white; padding: 10px 15px; font-weight: 800; font-size: 16pt; margin: 5mm 0 3mm 0; border-radius: 4px; text-transform: uppercase; }
-      .detail-app-subtitle { color: #0d9488; font-weight: 800; font-size: 12pt; margin: 4mm 0 2mm 5px; text-transform: uppercase; border-left: 4px solid #0d9488; padding-left: 10px; }
-      .detail-brand-badge { background: #1e293b; color: white; padding: 4px 12px; font-weight: 700; font-size: 10pt; display: inline-block; border-radius: 4px; margin-top: 3mm; text-transform: uppercase; }
-      .detail-repeat-header th { background: #0d9488; color: white; padding: 7px 10px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border-right: 1px solid #14b8a6; font-weight: 800; }
+      .detail-app-subtitle { color: #006eb3; font-weight: 800; font-size: 12pt; margin: 4mm 0 2mm 5px; text-transform: uppercase; border-left: 4px solid #006eb3; padding-left: 10px; }
+      .detail-brand-badge { background: #1e293b; color: white; padding: 4px 12px; font-weight: 700; font-size: 10pt; display: inline-block;margin-top: 3mm; text-transform: uppercase; }
+      .detail-repeat-header th { background: #006eb3; color: white; padding: 7px 10px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border-right: 1px solid #3b82f6; font-weight: 800; }
+ 
+      .footer { position: absolute; bottom: 8mm; left: 12mm; right: 12mm; font-size: 8pt; color: #94a3b8; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 3mm; z-index: 100; }
     `;
 
-    const PRODUCTS_PER_PAGE = 12;
+    const PRODUCTS_PER_PAGE = 6;
     const INDEX_ROWS_PER_PAGE = 30;
 
     const chunkArray = <T,>(arr: T[], size: number): T[][] => {
@@ -512,28 +560,35 @@ export default function ExportCatalog() {
     const indexStartPage = globalPageCounter + 1;
     globalPageCounter += indexPageCount;
 
-    // 4. Product Detail Index Calculation
-    const detailIndexRows: any[] = [];
+    // 4. Product Detail Index Calculation - Grouped by Category to force per-type page breaks
+    const detailChunks: any[][] = [];
     categoryMappings.forEach(cat => {
-      detailIndexRows.push({ type: 'type', name: cat.name });
+      const rowsForType: any[] = [];
+      rowsForType.push({ type: 'type', name: cat.name });
       
       const prodsInCat = cat.products || [];
       const appCats = Array.from(new Set(prodsInCat.map((p: any) => (p.applicationCategory || "General").toUpperCase()))).sort();
       
       appCats.forEach((appCat: string) => {
-        detailIndexRows.push({ type: 'appCat', name: appCat });
-        
+        rowsForType.push({ type: 'appCat', name: appCat });
         const brands = Array.from(new Set(prodsInCat.filter((p: any) => (p.applicationCategory || "General").toUpperCase() === appCat).map((p: any) => (p.brandName || "Other").toUpperCase()))).sort();
         
         brands.forEach((brand: string) => {
-          detailIndexRows.push({ type: 'brand', name: brand });
+          rowsForType.push({ type: 'brand', name: brand });
           const prods = prodsInCat.filter((p: any) => (p.applicationCategory || "General").toUpperCase() === appCat && (p.brandName || "Other").toUpperCase() === brand);
-          prods.forEach((p: any) => detailIndexRows.push({ type: 'product', ...p }));
+          prods.forEach((p: any) => rowsForType.push({ type: 'product', ...p }));
         });
       });
+
+      const chunksForType = chunkArray(rowsForType, 15);
+      // Attach the type name to each chunk for the header
+      chunksForType.forEach((chunk, i) => {
+        (chunk as any).typeName = cat.name;
+        (chunk as any).partInfo = chunksForType.length > 1 ? `(Part ${i + 1})` : '';
+      });
+      detailChunks.push(...chunksForType);
     });
 
-    const detailChunks = chunkArray(detailIndexRows, 15); // Further reduced for repeating headers
     const detailPageCount = (showIndex && detailChunks.length > 0) ? detailChunks.length : 0;
     const detailStartPage = globalPageCounter + 1;
     globalPageCounter += detailPageCount;
@@ -552,31 +607,45 @@ export default function ExportCatalog() {
     // 6. Build Final TOC with Ranges
     const tocRows: any[] = [];
     finalCategoryMappings.forEach(cat => {
-      const brandRanges: Record<string, { start: number; end: number }> = {};
-      cat.productChunks.forEach((chunk: any[], chunkIdx: number) => {
-        const pageNo = cat.startPage + chunkIdx;
-        chunk.forEach(p => {
-          const b = (p.brandName || "Other").toUpperCase();
-          if (!brandRanges[b]) {
-            brandRanges[b] = { start: pageNo, end: pageNo };
-          } else {
-            brandRanges[b].end = pageNo;
-          }
-        });
-      });
-
+      // Product Type (Type Level)
       const catRange = cat.productChunks.length > 1 
         ? `${cat.startPage} - ${cat.startPage + cat.productChunks.length - 1}`
         : `${cat.startPage}`;
-      
-      tocRows.push({ type: 'cat', name: cat.name, range: catRange });
+      tocRows.push({ type: 'type', name: cat.name, range: catRange });
 
-      Object.entries(brandRanges)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .forEach(([name, range]) => {
-          const brandRange = range.start === range.end ? `${range.start}` : `${range.start} - ${range.end}`;
-          tocRows.push({ type: 'brand', name, range: brandRange });
+      // Application Category Level
+      const prodsByType = cat.products || [];
+      const appCats = Array.from(new Set(prodsByType.map((p: any) => (p.applicationCategory || "General").toUpperCase()))).sort();
+
+      appCats.forEach(appCat => {
+        // Calculate range for this appCat
+        let aMin = Infinity, aMax = -Infinity;
+        cat.productChunks.forEach((chunk: any[], chunkIdx: number) => {
+          if (chunk.some(p => (p.applicationCategory || "General").toUpperCase() === appCat)) {
+            const pg = cat.startPage + chunkIdx;
+            if (pg < aMin) aMin = pg;
+            if (pg > aMax) aMax = pg;
+          }
         });
+        const appCatRange = aMin === aMax ? `${aMin}` : `${aMin} - ${aMax}`;
+        tocRows.push({ type: 'appCat', name: appCat, range: appCatRange });
+
+        // Brand Level within AppCat
+        const brands = Array.from(new Set(prodsByType.filter((p: any) => (p.applicationCategory || "General").toUpperCase() === appCat).map((p: any) => (p.brandName || "Other").toUpperCase()))).sort();
+        
+        brands.forEach(brand => {
+          let bMin = Infinity, bMax = -Infinity;
+          cat.productChunks.forEach((chunk: any[], chunkIdx: number) => {
+            if (chunk.some(p => (p.applicationCategory || "General").toUpperCase() === appCat && (p.brandName || "Other").toUpperCase() === brand)) {
+              const pg = cat.startPage + chunkIdx;
+              if (pg < bMin) bMin = pg;
+              if (pg > bMax) bMax = pg;
+            }
+          });
+          const brandRange = bMin === bMax ? `${bMin}` : `${bMin} - ${bMax}`;
+          tocRows.push({ type: 'brand', name: brand, range: brandRange });
+        });
+      });
     });
 
     const indexChunks = chunkArray(tocRows, 24);
@@ -591,7 +660,7 @@ export default function ExportCatalog() {
       <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: First Page Missing</h2>
       <p style="color: #334155; line-height: 1.6;">Unable to load <strong>public/cover-pages/first-page.html</strong>.</p>
     </div>`;
-    const footerPageContent = fixedPageContents.footerPage || `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2;">
+    const footerPageContent = fixedPageContents.footerPage || `<div style="padding: 40px; text-align: center; border: 2px dashed #f43f5e; border-radius: 8px; margin: 20px; font-family: sans-serif; background: #fff1f2; ">
       <h2 style="color: #e11d48; margin-bottom: 15px;">Warning: Footer Page Missing</h2>
       <p style="color: #334155; line-height: 1.6;">Unable to load <strong>public/cover-pages/Footer.html</strong>.</p>
     </div>`;
@@ -637,18 +706,26 @@ export default function ExportCatalog() {
 
       ${showIndex && indexChunks.length > 0 ? indexChunks.map((chunk: any[], idx: number) => `
         <div class="sheet page-break">
-          <div class="toc-header">
-            <span>Brand</span>
-            <span>Page No.</span>
+          <div class="section-title">
+            <span>INDEX</span>
           </div>
           
           <div class="toc-body">
             ${chunk.map(row => {
-              if (row.type === 'cat') {
+              if (row.type === 'type') {
                 return `
                   <div class="toc-cat-row">
                     <span>${row.name}</span>
                     <div class="toc-cat-dots"></div>
+                    
+                  </div>
+                `;
+              }
+              if (row.type === 'appCat') {
+                return `
+                  <div class="toc-app-row">
+                    <span>${row.name}</span>
+                    <div class="toc-app-dots"></div>
                     <span class="toc-page">${row.range}</span>
                   </div>
                 `;
@@ -671,71 +748,100 @@ export default function ExportCatalog() {
         </div>
       `).join('') : ''}
 
-      ${showIndex && detailChunks.length > 0 ? detailChunks.map((chunk: any[], idx: number) => `
-        <div class="sheet page-break">
-          <h2 class="section-title">Detail Product Index</h2>
-          
-          <table class="detail-table-teal">
-            <tbody>
-              ${chunk.map(row => {
-                if (row.type === 'type') {
-                  return `<tr><td colspan="4" style="border: none; padding: 0;"><div class="detail-type-banner">${row.name}</div></td></tr>`;
-                }
-                if (row.type === 'appCat') {
-                  return `<tr><td colspan="4" style="border: none; padding: 0;"><div class="detail-app-subtitle">${row.name}</div></td></tr>`;
-                }
-                if (row.type === 'brand') {
+      ${showIndex && detailChunks.length > 0 ? detailChunks.map((chunk: any[], idx: number) => {
+        const typeName = (chunk as any).typeName?.toUpperCase() || '';
+        const isCondenser = typeName.includes('CONDENSER');
+        const colCount = isCondenser ? 4 : 5;
+
+        return `
+          <div class="sheet page-break">
+            <h2 class="section-title">${(chunk as any).typeName} - Detail Index ${(chunk as any).partInfo}</h2>
+            
+            <table class="detail-table-teal">
+              <tbody>
+                ${chunk.map(row => {
+                  if (row.type === 'type') return '';
+                  if (row.type === 'appCat') {
+                    return `<tr><td colspan="${colCount}" style="border: none; padding: 0;"><div class="detail-app-subtitle">${row.name}</div></td></tr>`;
+                  }
+                  if (row.type === 'brand') {
+                    return `
+                      <tr><td colspan="${colCount}" style="border: none; padding: 10px 0 0 0;"><div class="detail-brand-badge">${row.name}</div></td></tr>
+                      <tr class="detail-repeat-header">
+                        <th style="width: 110px;">KCPL Code</th>
+                        <th>Model Name</th>
+                        <th style="width: 200px;">Adaptable Part</th>
+                        ${!isCondenser ? '<th>Size</th>' : ''}
+                        <th class="page-col" style="border-right:none;">P.No</th>
+                      </tr>
+                    `;
+                  }
+                  const p = row;
                   return `
-                    <tr><td colspan="4" style="border: none; padding: 10px 0 0 0;"><div class="detail-brand-badge">${row.name}</div></td></tr>
-                    <tr class="detail-repeat-header">
-                      <th>Model / Size</th>
-                      <th>KCPL Code</th>
-                      <th>Adaptable Part</th>
-                      <th class="page-col" style="border-right:none;">P.No</th>
+                    <tr>
+                      <td style="font-family: monospace; font-weight: bold;">${p.kcplCode || ''}</td>
+                      <td>${p.modelName || ''}</td>
+                      <td class="adaptable-col">${p.adaptablePartNo || ''}</td>
+                      ${!isCondenser ? `<td>${p.size || '—'}</td>` : ''}
+                      <td class="page-col">${categoryPageMap.get(p.categoryId) ?? categoryPageMap.get(p.productType) ?? categoryPageMap.get(String(p.categoryId)) ?? '—'}</td>
                     </tr>
                   `;
-                }
-                const p = row;
-                return `
-                  <tr>
-                    <td>${p.modelName || ''} ${p.size ? `• ${p.size}` : ''}</td>
-                    <td style="font-family: monospace;">${p.kcplCode || ''}</td>
-                    <td class="adaptable-col">${p.adaptablePartNo || ''}</td>
-                    <td class="page-col">${categoryPageMap.get(p.categoryId) ?? categoryPageMap.get(p.productType) ?? categoryPageMap.get(String(p.categoryId)) ?? '—'}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
+                }).join('')}
+              </tbody>
+            </table>
 
-          <div class="footer">
-            <span>KCPL Catalog</span>
-            <span class="page-number-box">${detailStartPage + idx}</span>
-            <span style="text-align: right;">Product Detail Index</span>
+            <div class="footer">
+              <span>KCPL Catalog</span>
+              <span class="page-number-box">${detailStartPage + idx}</span>
+              <span style="text-align: right;">${(chunk as any).typeName} - Detail Index </span>
+            </div>
           </div>
-        </div>
-      `).join('') : ''}
+        `;
+      }).join('') : ''}
+      ${finalCategoryMappings.map((cat: any) => cat.productChunks.map((chunk: any[], chunkIdx: number) => {
+        const firstProd = chunk[0] || {};
+        const appCat = firstProd.applicationCategory || "General";
+        const brand = firstProd.brandName || "Other";
+        const type = cat.name || "";
+        const seriesName = `${appCat}   `.toUpperCase();
 
-      ${finalCategoryMappings.map((cat: any) => cat.productChunks.map((chunk: any[], chunkIdx: number) => `
-        <div class="sheet page-break">
-          <h2 class="section-title">${cat.name} ${cat.productChunks.length > 1 ? `<span style="font-size: 10pt; color: #64748b; font-weight: normal; margin-left:10px;">(Part ${chunkIdx + 1})</span>` : ''}</h2>
-          <div class="product-grid">
-            ${chunk.map((p: any) => `
-              <div class="product-card">
-                ${p.imageUrl ? `<img src="${resolveUrl(p.imageUrl)}" class="product-img">` : `<div class="product-placeholder">No Image</div>`}
-                <div class="product-name">${p.modelName || 'Product'}</div>
-                <div class="product-sku">${p.kcplCode || 'CODE-000'}</div>
-                <div class="product-info">${p.brandName || ''} • ${p.size || 'No Size'}</div>
+        return `
+          <div class="sheet page-break">
+            <div class="cat-section">
+              <h2 class="section-title">${type}</h2>
+              <h1 class="series-title">${seriesName}</h1>
+              <div class="brand-banner-container">
+                <div class="brand-banner">ADAPTABLE FOR ${brand}</div>
               </div>
-            `).join('')}
+              
+              <div class="product-grid">
+                ${chunk.map(p => `
+                  <div class="product-card">
+                    <div class="kcpl-code-label">${p.kcplCode || ''}</div>
+                    <div class="product-img-box">
+                      ${p.imageUrl 
+                        ? `<img src="${resolveUrl(p.imageUrl)}" class="product-img" />`
+                        : `<div style="color:#cbd5e1; font-weight:bold;">NO IMAGE</div>`
+                      }
+                    </div>
+                    <div class="product-detail-footer">
+                      <div><span class="detail-label">MODEL NAME:</span> ${p.modelName || ''}</div>
+                      <div><span class="detail-label">ADAPTABLE PART NO:</span> ${p.adaptablePartNo || ''}</div>
+                      <div><span class="detail-label">SIZE:</span> ${p.size || '—'}</div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="footer">
+              <span>KCPL Catalog</span>
+              <span class="page-number-box">${cat.startPage + chunkIdx}</span>
+              <span style="text-align: right;">${type} - ${appCat}</span>
+            </div>
           </div>
-          <div class="footer">
-            <span>KCPL Catalog</span>
-            <span class="page-number-box">${cat.startPage + chunkIdx}</span>
-            <span style="text-align: right;">${cat.name}</span>
-          </div>
-        </div>
-      `).join('')).join('')}
+        `;
+      }).join('')).join('')}
 
       <div class="sheet">
         ${footerPageContent}

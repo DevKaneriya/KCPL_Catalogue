@@ -8,10 +8,11 @@
 
   <style>
     .custom-page-container {
-      max-width: 900px;
-      margin: 20px auto;
+      max-width: 100%;
+      margin: 0;
       background: #ffffff;
-      padding: 20px;
+      padding: 0;
+      padding-bottom: 40px;
       font-family: 'Inter', sans-serif;
     }
 
@@ -21,56 +22,58 @@
     }
 
     .page-heading {
-      color: #0f172a;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 15px;
+      color: #1e293b;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 12px;
       margin-bottom: 25px;
       font-size: 26px;
       font-weight: 700;
+      text-transform: uppercase;
     }
 
     .top-section {
       display: flex;
       gap: 25px;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
     .text-block {
-      width: 45%;
+      width: 50%;
     }
 
     .section-label {
       font-size: 14px;
-      color: #0284c7;
+      color: #006eb3;
       font-weight: 700;
       margin-bottom: 12px;
       text-transform: uppercase;
     }
 
     .section-text {
-      font-size: 14px;
-      line-height: 1.8;
+      font-size: 13.5px;
+      line-height: 1.7;
       color: #475569;
       text-align: justify;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .image-block {
-      width: 55%;
+      width: 50%;
     }
 
     .image-wrapper {
-      padding: 5px;
+      padding: 0;
     }
 
     .image-wrapper img {
       width: 100%;
       border-radius: 8px;
       object-fit: cover;
+      height: 240px;
     }
 
     .bottom-section {
-      margin-top: 25px;
+      margin-top: 15px;
     }
 
     .bottom-single {
@@ -80,7 +83,7 @@
 
     .bottom-single img {
       width: 100%;
-      height: 180px;
+      height: 210px !important;
       object-fit: cover;
       display: block;
       border-radius: 6px;
@@ -89,21 +92,22 @@
     .bottom-single::before {
       content: "";
       position: absolute;
-      left: -10px;
+      left: -6px;
       top: 0;
-      width: 10px;
+      width: 6px;
       height: 100%;
-      background: #0284c7;
+      background: #006eb3;
     }
 
     .bottom-single::after {
       content: "";
       position: absolute;
-      bottom: -6px;
+      bottom: 0;
       left: 0;
-      width: 35%;
+      width: 25%;
       height: 6px;
-      background: #0284c7;
+      background: #006eb3;
+      border-radius: 0 0 0 6px;
     }
   </style>
 
@@ -124,7 +128,7 @@
 
       <!-- Left Text -->
       <div class="text-block">
-        <h3 class="section-label">Shipping Area & Logistics</h3>
+
 
         <p class="section-text">
           At KCPL, we understand the importance of timely delivery and the impact it has
