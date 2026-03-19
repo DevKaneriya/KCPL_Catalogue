@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useGetCatalogPreviewData, useGetProductTypesMaster, useListContentPages } from "@workspace/api-client-react";
+import { useGetCatalogPreviewData, useGetProductTypesMaster, useListContentPages, exportCatalog } from "@workspace/api-client-react";
 
 type CatalogPreviewData = {
   contentPages?: any[];
@@ -582,6 +582,16 @@ export default function ExportCatalog() {
       }
 
       doc.save(`KCPL_Catalog_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      try {
+        await exportCatalog({
+          format: "pdf",
+          sections: previewData.sections ?? [],
+        });
+      } catch (err: any) {
+        console.warn("Export activity log failed", err);
+      }
+
       document.body.removeChild(tempContainer);
       setIsGenerating(false);
       toast({ title: "Download complete!" });

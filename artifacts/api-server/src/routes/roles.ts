@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, rolesTable, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { logActivity } from "../lib/activity-logger";
 import { authenticate, requirePermission } from "../middleware/auth";
 
 const router: IRouter = Router();
@@ -67,6 +68,14 @@ router.post("/roles", authenticate, requirePermission("roles:write"), async (req
     // Retrieve the created role by unique name
     const [role] = await db.select().from(rolesTable).where(eq(rolesTable.name, name));
     if (!role) { res.status(500).json({ error: "Role created but could not be retrieved" }); return; }
+    
+    await logActivity({ 
+      action: "Created", 
+      entityType: "Role", 
+      entityId: role.id, 
+      details: `Role "${name}" created with ${normalizedPermissions.length} permissions` 
+    });
+    
     res.status(201).json({ 
       ...role, 
       permissions: parsePermissions(role.permissions),
@@ -97,6 +106,14 @@ router.put("/roles/:id", authenticate, requirePermission("roles:write"), async (
     if (!role) { res.status(404).json({ error: "Not found" }); return; }
     
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(usersTable).where(eq(usersTable.roleId, id));
+    
+    await logActivity({ 
+      action: "Updated", 
+      entityType: "Role", 
+      entityId: id, 
+      details: `Role "${role.name}" updated` 
+    });
+    
     res.json({ 
       ...role, 
       permissions: parsePermissions(role.permissions),
@@ -112,7 +129,18 @@ router.delete("/roles/:id", authenticate, requirePermission("roles:write"), asyn
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid role id" }); return; }
   try {
+    const [role] = await db.select().from(rolesTable).where(eq(rolesTable.id, id));
+    if (!role) { res.status(404).json({ error: "Not found" }); return; }
+    
     await db.delete(rolesTable).where(eq(rolesTable.id, id));
+    
+    await logActivity({ 
+      action: "Deleted", 
+      entityType: "Role", 
+      entityId: id, 
+      details: `Role "${role.name}" deleted` 
+    });
+    
     res.status(204).send();
   } catch (err: any) {
     console.error("ERROR: Role delete failed:", err);

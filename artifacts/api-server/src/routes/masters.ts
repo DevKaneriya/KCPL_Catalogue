@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, brandsTable, applicationCategoriesTable, productTypesTable } from "@workspace/db";
 import { eq, asc, and } from "drizzle-orm";
+import { logActivity } from "../lib/activity-logger";
 import { authenticate, requirePermission } from "../middleware/auth";
 
 const router: IRouter = Router();
@@ -41,6 +42,14 @@ router.post("/brands", authenticate, requirePermission("products:write"), async 
       eq(brandsTable.productTypeId, Number(productTypeId)),
       eq(brandsTable.applicationCategoryId, Number(applicationCategoryId))
     ));
+    
+    await logActivity({ 
+      action: "Created", 
+      entityType: "Brand", 
+      entityId: brand?.id, 
+      details: `Brand "${name}" created` 
+    });
+    
     return res.status(201).json(brand);
   } catch (err: any) {
     return res.status(500).json({ error: "Failed to create brand", message: err.message });
@@ -50,7 +59,18 @@ router.post("/brands", authenticate, requirePermission("products:write"), async 
 router.delete("/brands/:id", authenticate, requirePermission("products:write"), async (req, res): Promise<any> => {
   try {
     const id = Number(req.params.id);
+    const [brand] = await db.select().from(brandsTable).where(eq(brandsTable.id, id));
+    if (!brand) return res.status(404).json({ error: "Brand not found" });
+    
     await db.delete(brandsTable).where(eq(brandsTable.id, id));
+    
+    await logActivity({ 
+      action: "Deleted", 
+      entityType: "Brand", 
+      entityId: id, 
+      details: `Brand "${brand.name}" deleted` 
+    });
+    
     return res.status(204).send();
   } catch (err: any) {
     return res.status(500).json({ error: "Failed to delete brand", message: err.message });
@@ -85,6 +105,14 @@ router.post("/application-categories", authenticate, requirePermission("products
       eq(applicationCategoriesTable.name, name),
       eq(applicationCategoriesTable.productTypeId, Number(productTypeId))
     ));
+    
+    await logActivity({ 
+      action: "Created", 
+      entityType: "ApplicationCategory", 
+      entityId: cat?.id, 
+      details: `Application Category "${name}" created` 
+    });
+    
     return res.status(201).json(cat);
   } catch (err: any) {
     return res.status(500).json({ error: "Failed to create application category", message: err.message });
@@ -94,7 +122,18 @@ router.post("/application-categories", authenticate, requirePermission("products
 router.delete("/application-categories/:id", authenticate, requirePermission("products:write"), async (req, res): Promise<any> => {
   try {
     const id = Number(req.params.id);
+    const [cat] = await db.select().from(applicationCategoriesTable).where(eq(applicationCategoriesTable.id, id));
+    if (!cat) return res.status(404).json({ error: "Application Category not found" });
+    
     await db.delete(applicationCategoriesTable).where(eq(applicationCategoriesTable.id, id));
+    
+    await logActivity({ 
+      action: "Deleted", 
+      entityType: "ApplicationCategory", 
+      entityId: id, 
+      details: `Application Category "${cat.name}" deleted` 
+    });
+    
     return res.status(204).send();
   } catch (err: any) {
     return res.status(500).json({ error: "Failed to delete application category", message: err.message });
@@ -118,6 +157,14 @@ router.post("/product-types", authenticate, requirePermission("products:write"),
     
     await db.insert(productTypesTable).values({ name }).onDuplicateKeyUpdate({ set: { name } });
     const [type] = await db.select().from(productTypesTable).where(eq(productTypesTable.name, name));
+    
+    await logActivity({ 
+      action: "Created", 
+      entityType: "ProductType", 
+      entityId: type?.id, 
+      details: `Product Type "${name}" created` 
+    });
+    
     return res.status(201).json(type);
   } catch (err: any) {
     return res.status(500).json({ error: "Failed to create product type", message: err.message });
@@ -127,7 +174,18 @@ router.post("/product-types", authenticate, requirePermission("products:write"),
 router.delete("/product-types/:id", authenticate, requirePermission("products:write"), async (req, res): Promise<any> => {
   try {
     const id = Number(req.params.id);
+    const [type] = await db.select().from(productTypesTable).where(eq(productTypesTable.id, id));
+    if (!type) return res.status(404).json({ error: "Product Type not found" });
+    
     await db.delete(productTypesTable).where(eq(productTypesTable.id, id));
+    
+    await logActivity({ 
+      action: "Deleted", 
+      entityType: "ProductType", 
+      entityId: id, 
+      details: `Product Type "${type.name}" deleted` 
+    });
+    
     return res.status(204).send();
   } catch (err: any) {
     return res.status(500).json({ error: "Failed to delete product type", message: err.message });

@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable, rolesTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { logActivity } from "../lib/activity-logger";
 import { authenticate, requirePermission } from "../middleware/auth";
 
 const router: IRouter = Router();
@@ -33,6 +34,14 @@ router.post("/users", authenticate, requirePermission("users:write"), async (req
     // Retrieve the created user by unique username (safer than relying on driver insert result shape)
     const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
     if (!user) { res.status(500).json({ error: "User created but could not be retrieved" }); return; }
+    
+    await logActivity({ 
+      action: "Created", 
+      entityType: "User", 
+      entityId: user.id, 
+      details: `User "${username}" created` 
+    });
+    
     res.status(201).json({ ...user, passwordHash: undefined, roleName: null });
   } catch (err: any) {
     console.error("ERROR: User creation failed:", err);
@@ -64,6 +73,14 @@ router.put("/users/:id", authenticate, requirePermission("users:write"), async (
       const [r] = await db.select({ name: rolesTable.name }).from(rolesTable).where(eq(rolesTable.id, user.roleId));
       roleName = r?.name;
     }
+    
+    await logActivity({ 
+      action: "Updated", 
+      entityType: "User", 
+      entityId: id, 
+      details: `User "${user.username}" updated` 
+    });
+    
     res.json({ ...user, passwordHash: undefined, roleName });
   } catch (err: any) {
     console.error("ERROR: User update failed:", err);
@@ -75,7 +92,18 @@ router.delete("/users/:id", authenticate, requirePermission("users:write"), asyn
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid user id" }); return; }
   try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+    if (!user) { res.status(404).json({ error: "Not found" }); return; }
+    
     await db.delete(usersTable).where(eq(usersTable.id, id));
+    
+    await logActivity({ 
+      action: "Deleted", 
+      entityType: "User", 
+      entityId: id, 
+      details: `User "${user.username}" deleted` 
+    });
+    
     res.status(204).send();
   } catch (err: any) {
     console.error("ERROR: User delete failed:", err);
